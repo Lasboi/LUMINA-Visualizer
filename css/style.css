@@ -1,0 +1,145 @@
+/* Reset basic styles and set full-screen background */
+body, html {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    background-color: #050505;
+    overflow: hidden; 
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Container for the welcome message */
+#container {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 10; 
+    text-align: center;
+    color: white;
+    pointer-events: none; 
+    width: 90%;
+    max-width: 600px;
+}
+
+/* Main title styling */
+h1 {
+    text-shadow: 0 0 10px rgba(0,0,0,0.8);
+    margin-bottom: 10px;
+    font-size: 2.5rem;
+}
+
+/* Instructions box aesthetics */
+.instructions {
+    background: rgba(15, 15, 20, 0.75);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    border-radius: 12px;
+    padding: 25px 35px;
+    margin: 0 auto 30px auto;
+    text-align: left;
+    line-height: 1.6;
+    pointer-events: auto; 
+}
+
+.instructions h3 {
+    margin-top: 0;
+    color: #ff007f;
+    text-align: center;
+    font-size: 1.2rem;
+}
+
+/* List styling */
+.instructions ol {
+    margin-bottom: 0;
+    padding-left: 20px;
+    color: #e0e0e0;
+}
+
+.instructions li {
+    margin-bottom: 12px;
+}
+
+/* Button styling */
+button {
+    pointer-events: auto; 
+    padding: 15px 40px;
+    font-size: 18px;
+    font-weight: bold;
+    background-color: #ff007f;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    box-shadow: 0 0 15px #ff007f;
+    transition: all 0.2s ease-in-out;
+}
+
+button:hover {
+    background-color: #ff4da6;
+    box-shadow: 0 0 30px #ff4da6;
+    transform: scale(1.05);
+}
+
+/* Canvas stretching to full screen */
+canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 1; 
+}
+
+/* Footer positioning */
+#footer { 
+    position: absolute;
+    bottom: 20px; 
+    width: 100%;        
+    text-align: center; 
+    z-index: 10;        
+    font-size: 14px; 
+    color: #8f98a0; 
+    pointer-events: none; 
+}
+
+#footer i { color: #ff3366; margin: 0 4px; animation: heartbeat 1.5s infinite; }
+#footer a { pointer-events: auto; color: #66c0f4; text-decoration: none; font-weight: 800; }
+
+@keyframes heartbeat { 
+    0%, 100% { transform: scale(1); } 
+    14%, 42% { transform: scale(1.2); } 
+    28%, 70% { transform: scale(1); } 
+}
+
+/* --- Desktop / Mobile Separation --- */
+
+/* By default (on desktop), hide the mobile elements */
+.mobile-only {
+    display: none;
+}
+
+/* Specific styling for the mobile microphone button */
+button.mobile-btn {
+    background-color: #66c0f4;
+    box-shadow: 0 0 15px #66c0f4;
+}
+
+button.mobile-btn:hover {
+    background-color: #8ed0f9;
+    box-shadow: 0 0 30px #8ed0f9;
+}
+
+/* When the screen width is 768px or smaller (Tablets & Phones) */
+@media (max-width: 768px) {
+    /* Hide desktop elements */
+    .desktop-only {
+        display: none !important;
+    }
+    
+    /* Show mobile elements */
+    .mobile-only {
+        display: block;
+    }
+}

@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="index, follow">
+    
+    <!-- Primary SEO Metadata -->
+    <title>LUMINA - Immersive 3D Audio Visualizer Online</title>
+    <meta name="description" content="Experience music like never before with LUMINA. A powerful, interactive 3D audio visualizer running directly in your browser using screen share or your microphone.">
+    <meta name="keywords" content="music visualizer, 3d audio visualizer, interactive visualizer, browser audio visualizer, live microphone visualizer, sound spectrum analyzer, VJ software online">
+    <meta name="author" content="LasBoi">
+
+    <!-- Open Graph / Facebook / Discord Metadata -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://lumina.lasboi.com/">
+    <meta property="og:title" content="LUMINA - Immersive 3D Audio Visualizer Online">
+    <meta property="og:description" content="Turn your music into stunning, real-time 3D wireframe visuals. Supports browser tab audio mirroring and live microphone input.">
+    <meta property="og:image" content="https://lumina.lasboi.com/assets/visualizer_meta.png">
+
+    <!-- Twitter / X Metadata -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://lumina.lasboi.com/">
+    <meta property="twitter:title" content="LUMINA - Immersive 3D Audio Visualizer Online">
+    <meta property="twitter:description" content="Turn your music into stunning, real-time 3D wireframe visuals. Supports browser tab audio mirroring and live microphone input.">
+    <meta property="twitter:image" content="https://lumina.lasboi.com/assets/visualizer_meta.png">
+
+    <!-- Link to external CSS file for styling -->
+    <link rel="stylesheet" href="css/style.css">
+    <!-- Link to Font Awesome for the heart icon in the footer -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Main container for the landing page UI -->
+    <div id="container">
+        <h1>LUMINA - Immersive Audio</h1>
+        
+        <!-- DESKTOP ONLY: Instructions and Button -->
+        <div class="desktop-only">
+            <!-- Instruction box to guide user on audio sharing -->
+            <div class="instructions">
+                <h3>How to connect your music:</h3>
+                <ol>
+                    <li>Start playing some music in another tab (like YouTube or Spotify) or on your desktop.</li>
+                    <li>Click the <strong>"Connect Audio"</strong> button below.</li>
+                    <li>A browser prompt will appear. Select the specific tab or screen where your music is playing.</li>
+                    <li><strong>Crucial Step:</strong> Make sure to toggle <strong>"Also share tab audio"</strong> or <strong>"Share system audio"</strong> before confirming!</li>
+                    <li>Click <strong>"Share"</strong> and enjoy the visualizer.</li>
+                </ol>
+            </div>
+            <button id="startBtn">Connect Audio</button>
+        </div>
+
+        <!-- MOBILE ONLY: Instructions and Button -->
+        <div class="mobile-only">
+            <!-- Instruction box to guide user on microphone usage -->
+            <div class="instructions">
+                <h3>How to connect your music:</h3>
+                <ol>
+                    <li>Play some music out loud from your phone's speaker or a nearby sound system.</li>
+                    <li>Click the <strong>"Use Microphone"</strong> button below.</li>
+                    <li>Allow <strong>microphone access</strong> when your browser asks for permission.</li>
+                    <li>Enjoy the visualizer reacting to the music in your room!</li>
+                </ol>
+            </div>
+            <button id="micBtn" class="mobile-btn">Use Microphone</button>
+        </div>
+    </div>
+    
+    <!-- The canvas element where the 3D visualizer is drawn -->
+    <canvas id="visualizer"></canvas>
+
+    <!-- Main JavaScript file containing the application logic -->
+    <script src="js/app.js"></script>
+
+    <!-- Footer section -->
+    <div id="footer">
+        Made with <i class="fa-solid fa-heart"></i> by <a href="https://steamcommunity.com/id/LasBoi/" target="_blank">LasBoi</a>
+    </div>
+</body>
+</html>
