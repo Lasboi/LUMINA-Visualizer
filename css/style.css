@@ -144,22 +144,31 @@ button.mobile-btn:hover {
     }
 }
 
-/* --- Mobile Radio Select Dropdown --- */
-.stream-select {
-    width: 100%;
-    padding: 12px;
-    background-color: rgba(10, 10, 15, 0.9);
-    color: #ffffff;
-    border: 1px solid #66c0f4;
-    border-radius: 8px;
+/* --- Universal Button Styling --- */
+.action-btn {
+    display: inline-block;
+    pointer-events: auto; 
+    padding: 12px 30px;
     font-size: 16px;
+    font-weight: bold;
+    background-color: #ff007f;
+    color: white;
+    border: none;
+    border-radius: 8px;
     cursor: pointer;
-    outline: none;
-    font-family: inherit;
+    box-shadow: 0 0 15px #ff007f;
+    transition: all 0.2s ease-in-out;
+    text-align: center;
 }
 
-.stream-select option {
-    background-color: #0f0f14;
-    color: #ffffff;
-    padding: 10px;
+.action-btn:hover {
+    transform: scale(1.05);
+    filter: brightness(1.2);
+}
+
+/* --- Desktop / Mobile Separation --- */
+@media (max-width: 768px) {
+    .desktop-only {
+        display: none !important;
+    }
 }

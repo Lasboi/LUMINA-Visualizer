@@ -1,16 +1,16 @@
 // Setup context for the canvas
 const canvas = document.getElementById('visualizer');
 const ctx = canvas.getContext('2d');
-const startBtn = document.getElementById('startBtn');
-const radioBtn = document.getElementById('radioBtn');       
-const radioSelect = document.getElementById('radioSelect');
+const startBtn = document.getElementById('startBtn'); // Desktop
+const audioUpload = document.getElementById('audioUpload'); // Mobile & Desktop
 const container = document.getElementById('container');
 
 // Audio and animation control variables
 let audioContext, analyser, source;
+let audioElement = null;
 let time = 0;             
 let figureRotation = 0;   
-let animationId; // Stores the animation frame ID to stop loops  
+let animationId; 
 
 // Adjust canvas size to fill the browser window
 function resizeCanvas() {
@@ -743,29 +743,24 @@ startBtn.addEventListener('click', async () => {
 });
 
 
-// --- MOBILE: INITIALIZE AUDIO SYSTEM VIA INTERNET RADIO ---
-radioBtn.addEventListener('click', async () => {
-    try {
-        
-        const originalText = radioBtn.innerText;
-        radioBtn.innerText = "Loading stream... Please wait";
-        radioBtn.disabled = true;
+// --- UNIVERSAL: INITIALIZE AUDIO SYSTEM VIA LOCAL FILE (100% RELIABLE) ---
+audioUpload.addEventListener('change', async function() {
+    const file = this.files[0];
+    if (!file) return;
 
+    try {
         // 1. Initialize AudioContext
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         if (!audioContext) {
             audioContext = new AudioContext();
         }
-        
         if (audioContext.state === 'suspended') {
             await audioContext.resume();
         }
 
-        // 2. Create the HTML5 Audio element
+        // 2. Create the HTML5 Audio element and generate a local URL for the file
         if (!audioElement) {
             audioElement = new Audio();
-            audioElement.crossOrigin = "anonymous"; 
-            
             source = audioContext.createMediaElementSource(audioElement);
             analyser = audioContext.createAnalyser();
             analyser.fftSize = 512;
@@ -774,25 +769,27 @@ radioBtn.addEventListener('click', async () => {
             analyser.connect(audioContext.destination); 
         }
 
-        // 3. Tving browseren til at hente den nye fil/stream
-        audioElement.src = radioSelect.value;
-        audioElement.load(); // KONTROL-TRIN: Nødvendigt på mobilen!
-
-        // 4. Afspil lyden
+        // Create a temporary, local, highly secure URL directly to the file on the device
+        const objectURL = URL.createObjectURL(file);
+        audioElement.src = objectURL;
+        
+        // 3. Play the audio
         await audioElement.play();
         
-        // Skjul UI og start animationen
+        // Hide UI and start drawing
         container.style.display = 'none';
         draw();
 
-        // Nulstil knappen hvis de går tilbage
-        radioBtn.innerText = originalText;
-        radioBtn.disabled = false;
+        // Release memory when the song ends, and return to start screen
+        audioElement.onended = () => {
+            cancelAnimationFrame(animationId);
+            URL.revokeObjectURL(objectURL); // Clean up memory
+            container.style.display = 'block';
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        };
 
     } catch (err) {
-        alert("The stream was blocked by mobile security (CORS) or network error. Please select the 'Test Track' from the top of the list instead!");
-        radioBtn.innerText = "Play Radio & Visualize";
-        radioBtn.disabled = false;
+        alert("Could not play the selected audio file. Please try another MP3 or WAV file.");
         console.error(err);
     }
 });

@@ -32,42 +32,39 @@
 </head>
 <body>
     <!-- Main container for the landing page UI -->
+    <<!-- Main container for the landing page UI -->
     <div id="container">
         <h1>LUMINA - Immersive Audio</h1>
         
-        <!-- DESKTOP ONLY: Instructions and Button -->
-        <div class="desktop-only">
-            <!-- Instruction box to guide user on audio sharing -->
-            <div class="instructions">
-                <h3>How to connect your music:</h3>
-                <ol>
-                    <li>Start playing some music in another tab (like YouTube or Spotify) or on your desktop.</li>
-                    <li>Click the <strong>"Connect Audio"</strong> button below.</li>
-                    <li>A browser prompt will appear. Select the specific tab or screen where your music is playing.</li>
-                    <li><strong>Crucial Step:</strong> Make sure to toggle <strong>"Also share tab audio"</strong> or <strong>"Share system audio"</strong> before confirming!</li>
-                    <li>Click <strong>"Share"</strong> and enjoy the visualizer.</li>
-                </ol>
-            </div>
-            <button id="startBtn">Connect Audio</button>
-        </div>
+        <!-- UNIVERSAL INSTRUCTIONS -->
+        <div class="instructions">
+            <h3>How to connect your music:</h3>
+            
+            <p style="margin-top: 5px; margin-bottom: 10px; color: #b0b8c0; text-align: center;">
+                Choose a method below to start the visualizer.
+            </p>
 
-        <!-- MOBILE ONLY: Instructions and Radio Player -->
-        <div class="mobile-only">
-            <!-- Instruction box to guide user on radio usage -->
-            <div class="instructions">
-                <h3>Select a Live Radio Stream:</h3>
-                <p style="margin-top: 5px; margin-bottom: 15px; color: #b0b8c0;">
-                    Mobile browsers block external app audio, so pick a live stream below to see the visualizer react instantly!
-                </p>
-                <select id="radioSelect" class="stream-select">
-                    <option value="https://cdn.pixabay.com/download/audio/2022/10/25/audio_228c2eb8c1.mp3">Test Track: Cyberpunk (Guaranteed 100% to work)</option>
-                    <option value="https://ice1.somafm.com/groovesalad-128-mp3">Radio: Groove Salad (Chill/Downtempo)</option>
-                    <option value="https://ice1.somafm.com/defcon-128-mp3">Radio: DEF CON (Hacking/Electronic)</option>
-                    <option value="https://ice1.somafm.com/dronezone-128-mp3">Radio: Drone Zone (Ambient/Atmospheric)</option>
-                </select>
+            <!-- METHOD 1: LOCAL FILE (Works perfectly on Mobile & Desktop) -->
+            <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                <strong style="color: #66c0f4; font-size: 1.1em;"><i class="fa-solid fa-music"></i> Method 1: Local File (Recommended for Mobile)</strong><br>
+                <span style="font-size: 0.9em; color: #ddd;">Select any MP3/WAV file from your device. No internet required, no lag, perfect bass response.</span>
+                <div style="margin-top: 15px; text-align: center;">
+                    <!-- The actual input is hidden, the label acts as the button -->
+                    <input type="file" id="audioUpload" accept="audio/*" style="display: none;">
+                    <label for="audioUpload" class="action-btn" style="background-color: #66c0f4; box-shadow: 0 0 15px #66c0f4;">Select Audio File</label>
+                </div>
             </div>
-            <button id="radioBtn" class="mobile-btn">Play Radio & Visualize</button>
+
+            <!-- METHOD 2: SCREEN SHARE (Desktop Only) -->
+            <div class="desktop-only" style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px;">
+                <strong style="color: #ff007f; font-size: 1.1em;"><i class="fa-solid fa-desktop"></i> Method 2: Screen Share (Desktop Only)</strong><br>
+                <span style="font-size: 0.9em; color: #ddd;">Play Spotify/YouTube in another tab. Click below and share that tab (Remember to check "Share Audio").</span>
+                <div style="margin-top: 15px; text-align: center;">
+                    <button id="startBtn" class="action-btn">Connect Tab Audio</button>
+                </div>
+            </div>
         </div>
+    </div>
     
     <!-- The canvas element where the 3D visualizer is drawn -->
     <canvas id="visualizer"></canvas>
