@@ -713,36 +713,68 @@ audioUpload.addEventListener('change', function() {
     filePlaySection.style.display = 'block';
 });
 
-// --- MOBILE: RADIO STREAM (The only way to bypass CORS on mobile) ---
-// Vi bruger en "CORS-Proxy" til at omgå mobilens sikkerhedsspærre
-const radioProxy = "https://corsproxy.io/?"; 
-const stationUrl = "https://ice1.somafm.com/groovesalad-128-mp3";
-
+// STEP 2: USER CLICKS PLAY (Decodes AudioBuffer to bypass Mobile Restrictions)
 playSelectedBtn.addEventListener('click', async () => {
-    try {
-        const AudioContext = window.AudioContext || window.webkitAudioContext;
-        if (!audioContext) audioContext = new AudioContext();
-        await audioContext.resume();
+    if (!selectedFile) return;
 
-        if (!audioElement) {
-            audioElement = new Audio();
-            // Vi bruger proxyen her for at snyde mobilens sikkerhedsfilter
-            audioElement.src = radioProxy + encodeURIComponent(stationUrl);
-            audioElement.crossOrigin = "anonymous";
-            
-            source = audioContext.createMediaElementSource(audioElement);
-            analyser = audioContext.createAnalyser();
-            analyser.fftSize = 512;
-            source.connect(analyser);
-            analyser.connect(audioContext.destination);
+    try {
+        // Change button text to indicate processing (helps mobile users know it's loading)
+        const originalBtnText = playSelectedBtn.innerText;
+        playSelectedBtn.innerText = "Processing audio...";
+        playSelectedBtn.disabled = true;
+
+        // 1. Initialize AudioContext ON CLICK (Crucial for mobile autoplay policies)
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!audioContext) {
+            audioContext = new AudioContext();
+        }
+        if (audioContext.state === 'suspended') {
+            await audioContext.resume();
         }
 
-        await audioElement.play();
+        // 2. Read the file into memory as an ArrayBuffer (Raw Data)
+        const arrayBuffer = await selectedFile.arrayBuffer();
+
+        // 3. Decode the raw data into pure audio (This skips the HTML5 <audio> element entirely)
+        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+
+        // 4. Build a source node that can play the decoded buffer
+        if (source) {
+            source.disconnect(); // Clean up if a previous song was playing
+        }
+        source = audioContext.createBufferSource();
+        source.buffer = audioBuffer;
+
+        // 5. Connect the source to the visualizer analyzer, and then to the speakers
+        if (!analyser) {
+            analyser = audioContext.createAnalyser();
+            analyser.fftSize = 512;
+        }
+        source.connect(analyser);
+        analyser.connect(audioContext.destination);
+
+        // 6. Start the audio!
+        source.start(0);
+
+        // Hide UI and start the visualization drawing loop
         container.style.display = 'none';
         draw();
+
+        // Clean up when the song is finished playing
+        source.onended = () => {
+            cancelAnimationFrame(animationId);
+            filePlaySection.style.display = 'none';
+            playSelectedBtn.innerText = originalBtnText;
+            playSelectedBtn.disabled = false;
+            container.style.display = 'block';
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        };
+
     } catch (err) {
-        alert("Mobile browsers blocked the radio stream. This happens because of strict security policies on mobile.");
-        console.error(err);
+        alert("An error occurred while reading the file. Ensure it is a standard audio file without DRM protection.");
+        playSelectedBtn.innerText = "Play & Visualize";
+        playSelectedBtn.disabled = false;
+        console.error("Audio Decode Error:", err);
     }
 });
 
