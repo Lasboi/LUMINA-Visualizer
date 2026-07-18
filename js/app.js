@@ -698,6 +698,14 @@ if (fromIndex === toIndex) toIndex = (toIndex + 1) % shapes.length;
 // --- DESKTOP: INITIALIZE AUDIO SYSTEM VIA SCREEN SHARE ---
 startBtn.addEventListener('click', async () => {
     try {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!audioContext) {
+            audioContext = new AudioContext();
+        }
+        if (audioContext.state === 'suspended') {
+            await audioContext.resume();
+        }
+
         // Prompt user for screen/audio sharing
         const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
         
@@ -707,7 +715,10 @@ startBtn.addEventListener('click', async () => {
             cancelAnimationFrame(animationId);
             
             // Safely close the audio connection
-            if (audioContext) audioContext.close();
+            if (audioContext) {
+                audioContext.close();
+                audioContext = null; // Nulstil, så den kan genstartes
+            }
             
             // Bring the landing page (container) back
             container.style.display = 'block';
@@ -716,8 +727,6 @@ startBtn.addEventListener('click', async () => {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
         };
 
-        // Setup the Web Audio API nodes
-        audioContext = new AudioContext();
         source = audioContext.createMediaStreamSource(stream);
         analyser = audioContext.createAnalyser();
         analyser.fftSize = 512;
@@ -736,11 +745,20 @@ startBtn.addEventListener('click', async () => {
 // --- MOBILE: INITIALIZE AUDIO SYSTEM VIA MICROPHONE ---
 micBtn.addEventListener('click', async () => {
     try {
-        // Request microphone access ONLY (no video/screen)
+        // 1. Opret AudioContext direkte på klikket, så vi ikke mister rettigheden
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!audioContext) {
+            audioContext = new AudioContext();
+        }
+        
+        // 2. Tving motoren til at vågne op fra dvale
+        if (audioContext.state === 'suspended') {
+            await audioContext.resume();
+        }
+
+        // 3. Nu kan vi roligt bede om lov til at bruge mikrofonen
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
         
-        // Setup the Web Audio API nodes
-        audioContext = new AudioContext();
         source = audioContext.createMediaStreamSource(stream);
         analyser = audioContext.createAnalyser();
         analyser.fftSize = 512;
