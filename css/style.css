@@ -7,14 +7,14 @@ body, html {
     background-color: #050505;
     overflow: hidden; 
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    display: flex;            
+    justify-content: center;   
+    align-items: center;       
 }
 
 /* Container for the welcome message */
 #container {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
+    position: relative;        
     z-index: 10; 
     text-align: center;
     color: white;
@@ -94,11 +94,11 @@ canvas {
 
 /* Footer positioning */
 #footer { 
-    position: absolute;
-    bottom: 20px; 
+    position: fixed;         
+    bottom: 15px; 
     width: 100%;        
     text-align: center; 
-    z-index: 10;        
+    z-index: 100;            
     font-size: 14px; 
     color: #8f98a0; 
     pointer-events: none; 

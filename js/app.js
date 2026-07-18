@@ -746,7 +746,12 @@ startBtn.addEventListener('click', async () => {
 // --- MOBILE: INITIALIZE AUDIO SYSTEM VIA INTERNET RADIO ---
 radioBtn.addEventListener('click', async () => {
     try {
-        // 1. Initialize AudioContext on user click to comply with Autoplay Policies
+        
+        const originalText = radioBtn.innerText;
+        radioBtn.innerText = "Loading stream... Please wait";
+        radioBtn.disabled = true;
+
+        // 1. Initialize AudioContext
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         if (!audioContext) {
             audioContext = new AudioContext();
@@ -756,32 +761,38 @@ radioBtn.addEventListener('click', async () => {
             await audioContext.resume();
         }
 
-        // 2. Create the HTML5 Audio element programmatically if it doesn't exist
+        // 2. Create the HTML5 Audio element
         if (!audioElement) {
             audioElement = new Audio();
-            // CRUCIAL: 'anonymous' prevents CORS errors which would block the visualizer data
             audioElement.crossOrigin = "anonymous"; 
             
-            // Route the audio through our analyzer
             source = audioContext.createMediaElementSource(audioElement);
             analyser = audioContext.createAnalyser();
             analyser.fftSize = 512;
             
             source.connect(analyser);
-            
-            // CRUCIAL FOR RADIO: We must connect the analyzer to the speakers so you can hear it!
             analyser.connect(audioContext.destination); 
         }
 
-        // 3. Set the stream URL from the dropdown and play
+        // 3. Tving browseren til at hente den nye fil/stream
         audioElement.src = radioSelect.value;
+        audioElement.load(); // KONTROL-TRIN: Nødvendigt på mobilen!
+
+        // 4. Afspil lyden
         await audioElement.play();
         
-        // Hide UI and start drawing
+        // Skjul UI og start animationen
         container.style.display = 'none';
         draw();
+
+        // Nulstil knappen hvis de går tilbage
+        radioBtn.innerText = originalText;
+        radioBtn.disabled = false;
+
     } catch (err) {
-        alert("Failed to load radio stream. Please try another station or check your internet connection.");
+        alert("The stream was blocked by mobile security (CORS) or network error. Please select the 'Test Track' from the top of the list instead!");
+        radioBtn.innerText = "Play Radio & Visualize";
+        radioBtn.disabled = false;
         console.error(err);
     }
 });
