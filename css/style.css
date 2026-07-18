@@ -143,3 +143,23 @@ button.mobile-btn:hover {
         display: block;
     }
 }
+
+/* --- Mobile Radio Select Dropdown --- */
+.stream-select {
+    width: 100%;
+    padding: 12px;
+    background-color: rgba(10, 10, 15, 0.9);
+    color: #ffffff;
+    border: 1px solid #66c0f4;
+    border-radius: 8px;
+    font-size: 16px;
+    cursor: pointer;
+    outline: none;
+    font-family: inherit;
+}
+
+.stream-select option {
+    background-color: #0f0f14;
+    color: #ffffff;
+    padding: 10px;
+}

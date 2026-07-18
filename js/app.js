@@ -2,7 +2,8 @@
 const canvas = document.getElementById('visualizer');
 const ctx = canvas.getContext('2d');
 const startBtn = document.getElementById('startBtn');
-const micBtn = document.getElementById('micBtn'); // <-- Added mobile button
+const radioBtn = document.getElementById('radioBtn');       
+const radioSelect = document.getElementById('radioSelect');
 const container = document.getElementById('container');
 
 // Audio and animation control variables
@@ -742,41 +743,46 @@ startBtn.addEventListener('click', async () => {
 });
 
 
-// --- MOBILE: INITIALIZE AUDIO SYSTEM VIA MICROPHONE ---
-micBtn.addEventListener('click', async () => {
+// --- MOBILE: INITIALIZE AUDIO SYSTEM VIA INTERNET RADIO ---
+radioBtn.addEventListener('click', async () => {
     try {
-        // 1. Opret AudioContext direkte på klikket, så vi ikke mister rettigheden
+        // 1. Initialize AudioContext on user click to comply with Autoplay Policies
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         if (!audioContext) {
             audioContext = new AudioContext();
         }
         
-        // 2. Tving motoren til at vågne op fra dvale
         if (audioContext.state === 'suspended') {
             await audioContext.resume();
         }
 
-        // 3. Tvinger telefonens hardware-filtre til at slukke!
-        const stream = await navigator.mediaDevices.getUserMedia({ 
-            audio: { 
-                echoCancellation: false, 
-                noiseSuppression: false, 
-                autoGainControl: false 
-            }, 
-            video: false 
-        });
-        
-        source = audioContext.createMediaStreamSource(stream);
-        analyser = audioContext.createAnalyser();
-        analyser.fftSize = 512;
-        source.connect(analyser);
+        // 2. Create the HTML5 Audio element programmatically if it doesn't exist
+        if (!audioElement) {
+            audioElement = new Audio();
+            // CRUCIAL: 'anonymous' prevents CORS errors which would block the visualizer data
+            audioElement.crossOrigin = "anonymous"; 
+            
+            // Route the audio through our analyzer
+            source = audioContext.createMediaElementSource(audioElement);
+            analyser = audioContext.createAnalyser();
+            analyser.fftSize = 512;
+            
+            source.connect(analyser);
+            
+            // CRUCIAL FOR RADIO: We must connect the analyzer to the speakers so you can hear it!
+            analyser.connect(audioContext.destination); 
+        }
+
+        // 3. Set the stream URL from the dropdown and play
+        audioElement.src = radioSelect.value;
+        await audioElement.play();
         
         // Hide UI and start drawing
         container.style.display = 'none';
         draw();
     } catch (err) {
-        // Precise English error message for mobile users
-        alert("Microphone access denied. Please allow microphone permissions in your browser settings to use the visualizer on mobile.");
+        alert("Failed to load radio stream. Please try another station or check your internet connection.");
+        console.error(err);
     }
 });
 

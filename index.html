@@ -51,21 +51,23 @@
             <button id="startBtn">Connect Audio</button>
         </div>
 
-        <!-- MOBILE ONLY: Instructions and Button -->
+        <!-- MOBILE ONLY: Instructions and Radio Player -->
         <div class="mobile-only">
-            <!-- Instruction box to guide user on microphone usage -->
+            <!-- Instruction box to guide user on radio usage -->
             <div class="instructions">
-                <h3>How to connect your music:</h3>
-                <ol>
-                    <li>Play some music out loud from your phone's speaker or a nearby sound system.</li>
-                    <li>Click the <strong>"Use Microphone"</strong> button below.</li>
-                    <li>Allow <strong>microphone access</strong> when your browser asks for permission.</li>
-                    <li>Enjoy the visualizer reacting to the music in your room!</li>
-                </ol>
+                <h3>Select a Live Radio Stream:</h3>
+                <p style="margin-top: 5px; margin-bottom: 15px; color: #b0b8c0;">
+                    Mobile browsers block external app audio, so pick a live stream below to see the visualizer react instantly!
+                </p>
+                <select id="radioSelect" class="stream-select">
+                    <option value="https://ice1.somafm.com/groovesalad-128-mp3">Groove Salad (Chill/Downtempo)</option>
+                    <option value="https://ice1.somafm.com/defcon-128-mp3">DEF CON Radio (Hacking/Electronic)</option>
+                    <option value="https://ice1.somafm.com/dronezone-128-mp3">Drone Zone (Ambient/Atmospheric)</option>
+                    <option value="https://ice1.somafm.com/deepspaceone-128-mp3">Deep Space One (Deep Ambient)</option>
+                </select>
             </div>
-            <button id="micBtn" class="mobile-btn">Use Microphone</button>
+            <button id="radioBtn" class="mobile-btn">Play Radio & Visualize</button>
         </div>
-    </div>
     
     <!-- The canvas element where the 3D visualizer is drawn -->
     <canvas id="visualizer"></canvas>
