@@ -778,6 +778,39 @@ playSelectedBtn.addEventListener('click', async () => {
     }
 });
 
+// --- MOBILE: RADIO STREAM (The only way to bypass CORS on mobile) ---
+// Vi bruger en "CORS-Proxy" til at omgå mobilens sikkerhedsspærre
+const radioProxy = "https://corsproxy.io/?"; 
+const stationUrl = "https://ice1.somafm.com/groovesalad-128-mp3";
+
+playSelectedBtn.addEventListener('click', async () => {
+    try {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!audioContext) audioContext = new AudioContext();
+        await audioContext.resume();
+
+        if (!audioElement) {
+            audioElement = new Audio();
+            // Vi bruger proxyen her for at snyde mobilens sikkerhedsfilter
+            audioElement.src = radioProxy + encodeURIComponent(stationUrl);
+            audioElement.crossOrigin = "anonymous";
+            
+            source = audioContext.createMediaElementSource(audioElement);
+            analyser = audioContext.createAnalyser();
+            analyser.fftSize = 512;
+            source.connect(analyser);
+            analyser.connect(audioContext.destination);
+        }
+
+        await audioElement.play();
+        container.style.display = 'none';
+        draw();
+    } catch (err) {
+        alert("Mobile browsers blocked the radio stream. This happens because of strict security policies on mobile.");
+        console.error(err);
+    }
+});
+
 
 // ==========================================
 // METHOD 2: SCREEN SHARE (DESKTOP ONLY)
