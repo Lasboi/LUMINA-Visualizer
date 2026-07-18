@@ -756,8 +756,15 @@ micBtn.addEventListener('click', async () => {
             await audioContext.resume();
         }
 
-        // 3. Nu kan vi roligt bede om lov til at bruge mikrofonen
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        // 3. Tvinger telefonens hardware-filtre til at slukke!
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+            audio: { 
+                echoCancellation: false, 
+                noiseSuppression: false, 
+                autoGainControl: false 
+            }, 
+            video: false 
+        });
         
         source = audioContext.createMediaStreamSource(stream);
         analyser = audioContext.createAnalyser();
