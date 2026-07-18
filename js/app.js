@@ -1,21 +1,21 @@
-// Setup context for the canvas
+// DOM Element selection
 const canvas = document.getElementById('visualizer');
 const ctx = canvas.getContext('2d');
-const startBtn = document.getElementById('startBtn'); // Desktop
-const audioUpload = document.getElementById('audioUpload'); // Mobile & Desktop
+const startBtn = document.getElementById('startBtn'); // Desktop sharing button
+const audioUpload = document.getElementById('audioUpload'); // Mobile/Desktop file upload
 const container = document.getElementById('container');
 
-// Audio and animation control variables
+// Elements for the two-step local file playback
 const filePlaySection = document.getElementById('filePlaySection');
 const fileNameDisplay = document.getElementById('fileNameDisplay');
 const playSelectedBtn = document.getElementById('playSelectedBtn');
 let selectedFile = null;
 
+// Audio and animation control variables
 let audioContext, analyser, source;
-let audioElement = null;
 let time = 0;             
 let figureRotation = 0;   
-let animationId; 
+let animationId; // Stores the animation frame ID to stop loops gracefully  
 
 // Adjust canvas size to fill the browser window
 function resizeCanvas() {
@@ -25,14 +25,14 @@ function resizeCanvas() {
 window.addEventListener('resize', resizeCanvas);
 resizeCanvas(); 
 
-// Camera settings for 3D projection
+// Camera settings for 3D projection mathematical formulas
 const focalLength = 900;
 const camZ = -1400; 
 
 // Project 3D coordinates (x,y,z) to 2D screen coordinates
 function project(x, y, z) {
     const rz = z - camZ;
-    if (rz <= 0) return null; 
+    if (rz <= 0) return null; // Prevents division by zero if point is behind camera
     const scale = focalLength / rz;
     return {
         x: (canvas.width / 2) + (x * scale),
@@ -42,12 +42,12 @@ function project(x, y, z) {
 }
 
 // --- GENERATING 43 UNIQUE 3D SHAPES ---
-// We create each shape by plotting 2000 points in 3D space
+// We create each shape by calculating and plotting 2000 points in 3D space
 const TOTAL_POINTS = 2000;
 const BASE_RADIUS = 350;
 const shapes = [];
 
-// Smoothing function for seamless morphing transitions between shapes
+// Smoothing mathematical function for seamless morphing transitions between shapes
 const easeInOutCubic = t => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 
 // 1. SPHERE
@@ -60,7 +60,7 @@ for (let i = 0; i < TOTAL_POINTS; i++) {
 }
 shapes.push(sphere);
 
-// 2. TORUS (Portal)
+// 2. TORUS (Portal ring)
 let torus = [];
 for (let i = 0; i < TOTAL_POINTS; i++) {
     let t = i / (TOTAL_POINTS - 1);
@@ -82,7 +82,7 @@ for (let i = 0; i < TOTAL_POINTS; i++) {
 }
 shapes.push(hourglass);
 
-// 4. DNA SPIRAL
+// 4. DNA SPIRAL (Double helix structure)
 let dna = [];
 for (let i = 0; i < TOTAL_POINTS; i++) {
     let t = i / (TOTAL_POINTS - 1);
@@ -93,7 +93,7 @@ for (let i = 0; i < TOTAL_POINTS; i++) {
 }
 shapes.push(dna);
 
-// 5. INFINITY KNOT
+// 5. INFINITY KNOT (Endless loop)
 let infinity = [];
 for (let i = 0; i < TOTAL_POINTS; i++) {
     let t = (i / (TOTAL_POINTS - 1)) * Math.PI * 2;
@@ -101,7 +101,7 @@ for (let i = 0; i < TOTAL_POINTS; i++) {
 }
 shapes.push(infinity);
 
-// 6. LOTUS FLOWER
+// 6. LOTUS FLOWER (Blooming petals)
 let lotus = [];
 for (let i = 0; i < TOTAL_POINTS; i++) {
     let t = i / (TOTAL_POINTS - 1);
@@ -112,7 +112,7 @@ for (let i = 0; i < TOTAL_POINTS; i++) {
 }
 shapes.push(lotus);
 
-// 7. TORUS KNOT (Advanced 3D Knot)
+// 7. TORUS KNOT (Advanced 3D intricate knot)
 let torusKnot = [];
 for (let i = 0; i < TOTAL_POINTS; i++) {
     let t = (i / (TOTAL_POINTS - 1)) * Math.PI * 2;
@@ -121,18 +121,18 @@ for (let i = 0; i < TOTAL_POINTS; i++) {
 }
 shapes.push(torusKnot);
 
-// 8. HEART
+// 8. HEART (Pulsating heart shape)
 let heart = [];
 for (let i = 0; i < TOTAL_POINTS; i++) {
     let t = (i / (TOTAL_POINTS - 1)) * Math.PI * 2;
     let x = 0.05 * 16 * Math.pow(Math.sin(t), 3);
     let y = -0.05 * (13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t));
-    let z = Math.sin(t * 15) * 0.15; // Adds depth/thickness
+    let z = Math.sin(t * 15) * 0.15; // Adds depth/thickness to the 2D formula
     heart.push({ x: x, y: y, z: z });
 }
 shapes.push(heart);
 
-// 9. MÖBIUS STRIP
+// 9. MÖBIUS STRIP (Non-orientable mathematical surface)
 let mobius = [];
 for (let i = 0; i < TOTAL_POINTS; i++) {
     let u = ((i % 100) / 100) * Math.PI * 2;
@@ -145,7 +145,7 @@ for (let i = 0; i < TOTAL_POINTS; i++) {
 }
 shapes.push(mobius);
 
-// 10. CRYSTAL / SEA URCHIN
+// 10. CRYSTAL / SEA URCHIN (Spiky defensive shape)
 let crystal = [];
 for (let i = 0; i < TOTAL_POINTS; i++) {
     let t = i / (TOTAL_POINTS - 1);
@@ -156,13 +156,13 @@ for (let i = 0; i < TOTAL_POINTS; i++) {
 }
 shapes.push(crystal);
 
-// 11. VORTEX / GALAXY
+// 11. VORTEX / GALAXY (Swirling funnel)
 let vortex = [];
 for (let i = 0; i < TOTAL_POINTS; i++) {
     let t = i / (TOTAL_POINTS - 1);
     let r = t;
     let theta = t * Math.PI * 30;
-    let y = Math.sin(i * 1234.5) * 0.15 * t; // Fixed pseudo-random scattering
+    let y = Math.sin(i * 1234.5) * 0.15 * t; // Fixed pseudo-random vertical scattering
     vortex.push({ x: r * Math.cos(theta), y: y, z: r * Math.sin(theta) });
 }
 shapes.push(vortex);
@@ -178,7 +178,7 @@ for (let i = 0; i < TOTAL_POINTS; i++) {
 }
 shapes.push(cylinder);
 
-// 13. THE WAVE (Matrix Grid)
+// 13. THE WAVE (Matrix Grid landscape)
 let wave = [];
 for (let i = 0; i < TOTAL_POINTS; i++) {
     let u = ((i % 45) / 45) * 2 - 1;
@@ -188,7 +188,7 @@ for (let i = 0; i < TOTAL_POINTS; i++) {
 }
 shapes.push(wave);
 
-// 14. SPINNING TOP
+// 14. SPINNING TOP (Classic toy shape)
 let spinningTop = [];
 for (let i = 0; i < TOTAL_POINTS; i++) {
     let t = i / (TOTAL_POINTS - 1);
@@ -210,7 +210,7 @@ for (let i = 0; i < TOTAL_POINTS; i++) {
 }
 shapes.push(spinningTop);
 
-// 15. THE TRUE ROSE (V3 - True 3D Flower with Petals)
+// 15. THE TRUE ROSE (V3 - True 3D Flower with Petals and Stem)
 let trueRose = [];
 for (let i = 0; i < TOTAL_POINTS; i++) {
     let t = i / (TOTAL_POINTS - 1);
@@ -392,7 +392,7 @@ for (let i = 0; i < TOTAL_POINTS; i++) {
 }
 shapes.push(iris);
 
-// 20. EVENT HORIZON (Black Hole)
+// 20. EVENT HORIZON (Black Hole funnel)
 let blackHole = [];
 for (let i = 0; i < TOTAL_POINTS; i++) {
     let t = i / (TOTAL_POINTS - 1);
@@ -415,7 +415,7 @@ for (let i = 0; i < TOTAL_POINTS; i++) {
 }
 shapes.push(blackHole);
 
-// 21. HYPER-TORUS (4D Folding illusion)
+// 21. HYPER-TORUS (4D Folding illusion shape)
 let hyperTorus = [];
 for (let i = 0; i < TOTAL_POINTS; i++) {
     let t = i / (TOTAL_POINTS - 1);
@@ -453,14 +453,13 @@ for (let i = 0; i < TOTAL_POINTS; i++) {
 }
 shapes.push(glitch);
 
-// 23. QUANTUM PULSAR (Geometric Reactor)
+// 23. QUANTUM PULSAR (Geometric Reactor with sharp interlacing spikes)
 let pulsar = [];
 for (let i = 0; i < TOTAL_POINTS; i++) {
     let t = i / (TOTAL_POINTS - 1);
     let phi = Math.acos(1 - 2 * t);
     let theta = Math.PI * (1 + Math.sqrt(5)) * i;
 
-    // Creates extremely sharp "star spikes" that interlace
     let spikes = Math.abs(Math.sin(theta * 6) * Math.cos(phi * 6));
     let r = 0.4 + 0.9 * Math.pow(spikes, 1.5);
 
@@ -686,13 +685,12 @@ for (let i = 0; i < TOTAL_POINTS; i++) {
 shapes.push(cyberTornado);
 
 
-// --- STARFIELD ---
+// --- STARFIELD GENERATOR ---
 const stars = [];
 const NUM_STARS = 1500;
 for (let i = 0; i < NUM_STARS; i++) {
     stars.push({ x: (Math.random() - 0.5) * 6000, y: (Math.random() - 0.5) * 6000, z: Math.random() * 6000 });
 }
-
 
 // --- RANDOM STATE MACHINE LOGIC ---
 let lastCycle = -1;
@@ -701,9 +699,31 @@ let toIndex = Math.floor(Math.random() * shapes.length);
 if (fromIndex === toIndex) toIndex = (toIndex + 1) % shapes.length;
 
 
-// --- DESKTOP: INITIALIZE AUDIO SYSTEM VIA SCREEN SHARE ---
-startBtn.addEventListener('click', async () => {
+// ==========================================
+// METHOD 1: LOCAL AUDIO FILE (UNIVERSAL/MOBILE)
+// ==========================================
+
+// STEP 1: USER SELECTS THE FILE
+audioUpload.addEventListener('change', function() {
+    selectedFile = this.files[0];
+    if (!selectedFile) return;
+
+    // Display the file name and reveal the "Play" button
+    fileNameDisplay.innerText = "Ready: " + selectedFile.name;
+    filePlaySection.style.display = 'block';
+});
+
+// STEP 2: USER CLICKS PLAY (Decodes AudioBuffer to bypass Mobile Restrictions)
+playSelectedBtn.addEventListener('click', async () => {
+    if (!selectedFile) return;
+
     try {
+        // Change button text to indicate processing (helps mobile users know it's loading)
+        const originalBtnText = playSelectedBtn.innerText;
+        playSelectedBtn.innerText = "Processing audio...";
+        playSelectedBtn.disabled = true;
+
+        // 1. Initialize AudioContext ON CLICK (Crucial for mobile autoplay policies)
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         if (!audioContext) {
             audioContext = new AudioContext();
@@ -712,7 +732,68 @@ startBtn.addEventListener('click', async () => {
             await audioContext.resume();
         }
 
-        // Prompt user for screen/audio sharing
+        // 2. Read the file into memory as an ArrayBuffer (Raw Data)
+        const arrayBuffer = await selectedFile.arrayBuffer();
+
+        // 3. Decode the raw data into pure audio (This skips the HTML5 <audio> element entirely)
+        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+
+        // 4. Build a source node that can play the decoded buffer
+        if (source) {
+            source.disconnect(); // Clean up if a previous song was playing
+        }
+        source = audioContext.createBufferSource();
+        source.buffer = audioBuffer;
+
+        // 5. Connect the source to the visualizer analyzer, and then to the speakers
+        if (!analyser) {
+            analyser = audioContext.createAnalyser();
+            analyser.fftSize = 512;
+        }
+        source.connect(analyser);
+        analyser.connect(audioContext.destination);
+
+        // 6. Start the audio!
+        source.start(0);
+
+        // Hide UI and start the visualization drawing loop
+        container.style.display = 'none';
+        draw();
+
+        // Clean up when the song is finished playing
+        source.onended = () => {
+            cancelAnimationFrame(animationId);
+            filePlaySection.style.display = 'none';
+            playSelectedBtn.innerText = originalBtnText;
+            playSelectedBtn.disabled = false;
+            container.style.display = 'block';
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        };
+
+    } catch (err) {
+        alert("An error occurred while reading the file. Ensure it is a standard audio file without DRM protection.");
+        playSelectedBtn.innerText = "Play & Visualize";
+        playSelectedBtn.disabled = false;
+        console.error("Audio Decode Error:", err);
+    }
+});
+
+
+// ==========================================
+// METHOD 2: SCREEN SHARE (DESKTOP ONLY)
+// ==========================================
+startBtn.addEventListener('click', async () => {
+    try {
+        // 1. Initialize AudioContext ON CLICK
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!audioContext) {
+            audioContext = new AudioContext();
+        }
+        if (audioContext.state === 'suspended') {
+            await audioContext.resume();
+        }
+
+        // 2. Prompt user for screen/audio sharing
         const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
         
         // --- LISTEN FOR "STOP SHARING" BUTTON ---
@@ -723,7 +804,7 @@ startBtn.addEventListener('click', async () => {
             // Safely close the audio connection
             if (audioContext) {
                 audioContext.close();
-                audioContext = null; // Nulstil, så den kan genstartes
+                audioContext = null;
             }
             
             // Bring the landing page (container) back
@@ -733,6 +814,7 @@ startBtn.addEventListener('click', async () => {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
         };
 
+        // 3. Connect the live stream to the analyzer
         source = audioContext.createMediaStreamSource(stream);
         analyser = audioContext.createAnalyser();
         analyser.fftSize = 512;
@@ -748,84 +830,24 @@ startBtn.addEventListener('click', async () => {
 });
 
 
-// --- UNIVERSAL: INITIALIZE AUDIO SYSTEM VIA LOCAL FILE (100% RELIABLE) ---
-audioUpload.addEventListener('change', function() {
-    selectedFile = this.files[0];
-    if (!selectedFile) return;
-
-    // Vis filnavnet og fremkald den nye "Play" knap
-    fileNameDisplay.innerText = "Ready: " + selectedFile.name;
-    filePlaySection.style.display = 'block';
-});
-
-
-playSelectedBtn.addEventListener('click', async () => {
-    if (!selectedFile) return;
-
-    try {
-        // 1. Initialize AudioContext ON CLICK (Dette er nøglen til at snyde mobilen)
-        const AudioContext = window.AudioContext || window.webkitAudioContext;
-        if (!audioContext) {
-            audioContext = new AudioContext();
-        }
-        if (audioContext.state === 'suspended') {
-            await audioContext.resume();
-        }
-
-        // 2. Create the HTML5 Audio element
-        if (!audioElement) {
-            audioElement = new Audio();
-            source = audioContext.createMediaElementSource(audioElement);
-            analyser = audioContext.createAnalyser();
-            analyser.fftSize = 512;
-            
-            source.connect(analyser);
-            analyser.connect(audioContext.destination); 
-        }
-
-        
-        const objectURL = URL.createObjectURL(selectedFile);
-        audioElement.src = objectURL;
-        
-        // 3. Play the audio
-        await audioElement.play();
-        
-        
-        container.style.display = 'none';
-        draw();
-
-        
-        audioElement.onended = () => {
-            cancelAnimationFrame(animationId);
-            URL.revokeObjectURL(objectURL); // Frigiv telefonens hukommelse
-            filePlaySection.style.display = 'none'; // Skjul play-knappen igen
-            container.style.display = 'block';
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-        };
-
-    } catch (err) {
-        alert("Browseren blokerede lyden. Sørg for at filen er en standard MP3 eller WAV, og ikke en DRM-beskyttet fil.");
-        console.error(err);
-    }
-});
-
-
-// --- MAIN ANIMATION LOOP ---
+// ==========================================
+// MAIN ANIMATION LOOP
+// ==========================================
 function draw() {
     animationId = requestAnimationFrame(draw);
     time += 0.015; 
     
-    // Process audio data
+    // Process live audio data
     const bufferLength = analyser.frequencyBinCount;
     const dataArray = new Uint8Array(bufferLength);
     analyser.getByteFrequencyData(dataArray);
 
-    // Calculate heavy bass impact
+    // Calculate heavy bass impact based on low frequencies
     let bassSum = 0;
     for (let i = 1; i <= 5; i++) bassSum += dataArray[i];
     let bassPunch = Math.pow((bassSum / 5) / 255, 3);
 
-    // Base rotation is slow, bass impact provides a soft push
+    // Base rotation is slow, bass impact provides a sudden push
     figureRotation += 0.002 + (bassPunch * 0.015);
 
     // --- RANDOMIZER TIMELINE LOGIC ---
@@ -848,7 +870,7 @@ function draw() {
         lastCycle = currentCycle;
     }
 
-    // Calculate smooth morphing weight (0 to 1)
+    // Calculate smooth morphing weight (0 to 1) for shape transitions
     let morphWeight = 0;
     if (cycleTime > HOLD_LENGTH) {
         let rawWeight = (cycleTime - HOLD_LENGTH) / (CYCLE_LENGTH - HOLD_LENGTH);
@@ -858,22 +880,28 @@ function draw() {
     const fromShape = shapes[fromIndex];
     const toShape = shapes[toIndex];
 
-    // Clear background with slight motion blur trail
+    // Clear background with slight motion blur trail (opacity 0.4)
     ctx.fillStyle = 'rgba(5, 5, 12, 0.4)';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Use 'lighter' for glowing visual effects
     ctx.globalCompositeOperation = 'lighter';
 
-    // Draw Stars
+    // --- DRAW STARFIELD ---
     ctx.fillStyle = `rgba(200, 220, 255, 0.8)`;
     ctx.beginPath();
     stars.forEach(star => {
+        // Stars accelerate based on bass punch
         let speed = 2 + (bassPunch * 60);
         star.z -= speed;
+        
+        // Reset stars that fly past the camera
         if (star.z <= 0) {
             star.z = 6000;
             star.x = (Math.random() - 0.5) * 6000;
             star.y = (Math.random() - 0.5) * 6000;
         }
+        
         let proj = project(star.x, star.y, star.z);
         if (proj) {
             let radius = Math.max(0.1, (0.5 + bassPunch * 2) * proj.scale);
@@ -883,39 +911,41 @@ function draw() {
     });
     ctx.fill();
 
-    // Slow down the axis swing
+    // Slow down the general axis swing
     let rotX = figureRotation * 0.15;
     let rotY = figureRotation * 0.25;
     
-    // Color rotates over time and shifts entirely upon new cycle
+    // Color hue rotates over time and shifts entirely upon a new shape cycle
     let hue = (time * 15 + (currentCycle * 60)) % 360;
     ctx.strokeStyle = `hsla(${hue}, 90%, 65%, ${0.5 + bassPunch * 0.5})`;
     ctx.lineWidth = 1.5;
     ctx.beginPath();
 
-    // Draw the active 3D shape line by line
+    // --- DRAW THE ACTIVE 3D SHAPE ---
     for (let i = 0; i < TOTAL_POINTS; i++) {
+        // Linearly interpolate (morph) between the current shape and the next shape
         let targetX = fromShape[i].x + (toShape[i].x - fromShape[i].x) * morphWeight;
         let targetY = fromShape[i].y + (toShape[i].y - fromShape[i].y) * morphWeight;
         let targetZ = fromShape[i].z + (toShape[i].z - fromShape[i].z) * morphWeight;
 
-        // Sync specific points to specific audio frequencies
+        // Sync specific points to specific audio frequencies from the analyzer
         let freqIndex = i % Math.floor(bufferLength / 2);
         let pointAudio = dataArray[freqIndex] / 255;
         
+        // Push the radius outward based on audio intensity
         let dynamicRadius = BASE_RADIUS + (pointAudio * 80) + (Math.sin(i + time * 10) * 15 * bassPunch);
         
         let x = targetX * dynamicRadius;
         let y = targetY * dynamicRadius;
         let z = targetZ * dynamicRadius;
 
-        // Apply 3D rotation transformations
+        // Apply 3D rotation matrix transformations
         let rotX_y = y * Math.cos(rotX) - z * Math.sin(rotX);
         let rotX_z = y * Math.sin(rotX) + z * Math.cos(rotX);
         let finalX = x * Math.cos(rotY) + rotX_z * Math.sin(rotY);
         let finalZ = -x * Math.sin(rotY) + rotX_z * Math.cos(rotY);
 
-        // Project 3D onto 2D canvas
+        // Project the final 3D point onto the 2D canvas
         let proj = project(finalX, rotX_y, finalZ);
         
         if (proj) {
@@ -925,7 +955,7 @@ function draw() {
                 ctx.lineTo(proj.x, proj.y);
             }
             
-            // Draw tiny glowing dots on points reacting heavily to music
+            // Draw tiny glowing dots on vertices reacting heavily to the music
             if (pointAudio > 0.7) {
                 ctx.fillStyle = `hsla(${hue}, 100%, 85%, 0.9)`;
                 ctx.fillRect(proj.x - 1, proj.y - 1, 2, 2);
@@ -934,6 +964,6 @@ function draw() {
     }
     ctx.stroke();
     
-    // Reset composite operation
+    // Reset composite operation for the next frame
     ctx.globalCompositeOperation = 'source-over';
 }

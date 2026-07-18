@@ -7,23 +7,24 @@
     
     <!-- Primary SEO Metadata -->
     <title>LUMINA - Immersive 3D Audio Visualizer Online</title>
-    <meta name="description" content="Experience music like never before with LUMINA. A powerful, interactive 3D audio visualizer running directly in your browser using screen share or your microphone.">
-    <meta name="keywords" content="music visualizer, 3d audio visualizer, interactive visualizer, browser audio visualizer, live microphone visualizer, sound spectrum analyzer, VJ software online">
+    <meta name="description" content="Experience music like never before with LUMINA. A powerful, interactive 3D audio visualizer running directly in your browser using screen share or local audio files.">
+    <meta name="keywords" content="music visualizer, 3d audio visualizer, interactive visualizer, browser audio visualizer, local file visualizer, sound spectrum analyzer, VJ software online">
     <meta name="author" content="LasBoi">
 
     <!-- Open Graph / Facebook / Discord Metadata -->
     <meta property="og:type" content="website">
-    <meta property="og:url" content="https://lumina.lasboi.com/">
+    <meta property="og:url" content="https://yourdomain.com/">
     <meta property="og:title" content="LUMINA - Immersive 3D Audio Visualizer Online">
-    <meta property="og:description" content="Turn your music into stunning, real-time 3D wireframe visuals. Supports browser tab audio mirroring and live microphone input.">
-    <meta property="og:image" content="https://lumina.lasboi.com/assets/visualizer_meta.png">
+    <meta property="og:description" content="Turn your music into stunning, real-time 3D wireframe visuals. Supports browser tab audio mirroring and local audio file playback.">
+    <!-- PLACEHOLDER FOR META IMAGE: Recommended size 1200x630 pixels -->
+    <meta property="og:image" content="https://yourdomain.com/assets/og-image.jpg">
 
     <!-- Twitter / X Metadata -->
     <meta property="twitter:card" content="summary_large_image">
-    <meta property="twitter:url" content="https://lumina.lasboi.com/">
+    <meta property="twitter:url" content="https://yourdomain.com/">
     <meta property="twitter:title" content="LUMINA - Immersive 3D Audio Visualizer Online">
-    <meta property="twitter:description" content="Turn your music into stunning, real-time 3D wireframe visuals. Supports browser tab audio mirroring and live microphone input.">
-    <meta property="twitter:image" content="https://lumina.lasboi.com/assets/visualizer_meta.png">
+    <meta property="twitter:description" content="Turn your music into stunning, real-time 3D wireframe visuals. Supports browser tab audio mirroring and local audio file playback.">
+    <meta property="twitter:image" content="https://yourdomain.com/assets/og-image.jpg">
 
     <!-- Link to external CSS file for styling -->
     <link rel="stylesheet" href="css/style.css">
@@ -32,7 +33,6 @@
 </head>
 <body>
     <!-- Main container for the landing page UI -->
-    <<!-- Main container for the landing page UI -->
     <div id="container">
         <h1>LUMINA - Immersive Audio</h1>
         
@@ -49,13 +49,13 @@
                 <strong style="color: #66c0f4; font-size: 1.1em;"><i class="fa-solid fa-music"></i> Method 1: Local File (Recommended for Mobile)</strong><br>
                 <span style="font-size: 0.9em; color: #ddd;">Select any MP3/WAV file from your device. No internet required, no lag, perfect bass response.</span>
                 
-                
+                <!-- Button to open the file picker -->
                 <div style="margin-top: 15px; text-align: center;">
                     <input type="file" id="audioUpload" accept="audio/*" style="display: none;">
                     <label for="audioUpload" class="action-btn" style="background-color: #66c0f4; box-shadow: 0 0 15px #66c0f4;">Select Audio File</label>
                 </div>
 
-                
+                <!-- Hidden section that appears after a file is selected to initiate playback securely -->
                 <div id="filePlaySection" style="display: none; margin-top: 15px; text-align: center; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px;">
                     <p id="fileNameDisplay" style="color: #fff; font-size: 0.9em; margin-bottom: 15px; word-break: break-all;"></p>
                     <button id="playSelectedBtn" class="action-btn" style="background-color: #00e5ff; box-shadow: 0 0 15px #00e5ff;">Play & Visualize</button>
