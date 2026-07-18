@@ -6,6 +6,11 @@ const audioUpload = document.getElementById('audioUpload'); // Mobile & Desktop
 const container = document.getElementById('container');
 
 // Audio and animation control variables
+const filePlaySection = document.getElementById('filePlaySection');
+const fileNameDisplay = document.getElementById('fileNameDisplay');
+const playSelectedBtn = document.getElementById('playSelectedBtn');
+let selectedFile = null;
+
 let audioContext, analyser, source;
 let audioElement = null;
 let time = 0;             
@@ -744,12 +749,21 @@ startBtn.addEventListener('click', async () => {
 
 
 // --- UNIVERSAL: INITIALIZE AUDIO SYSTEM VIA LOCAL FILE (100% RELIABLE) ---
-audioUpload.addEventListener('change', async function() {
-    const file = this.files[0];
-    if (!file) return;
+audioUpload.addEventListener('change', function() {
+    selectedFile = this.files[0];
+    if (!selectedFile) return;
+
+    // Vis filnavnet og fremkald den nye "Play" knap
+    fileNameDisplay.innerText = "Ready: " + selectedFile.name;
+    filePlaySection.style.display = 'block';
+});
+
+
+playSelectedBtn.addEventListener('click', async () => {
+    if (!selectedFile) return;
 
     try {
-        // 1. Initialize AudioContext
+        // 1. Initialize AudioContext ON CLICK (Dette er nøglen til at snyde mobilen)
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         if (!audioContext) {
             audioContext = new AudioContext();
@@ -758,7 +772,7 @@ audioUpload.addEventListener('change', async function() {
             await audioContext.resume();
         }
 
-        // 2. Create the HTML5 Audio element and generate a local URL for the file
+        // 2. Create the HTML5 Audio element
         if (!audioElement) {
             audioElement = new Audio();
             source = audioContext.createMediaElementSource(audioElement);
@@ -769,27 +783,28 @@ audioUpload.addEventListener('change', async function() {
             analyser.connect(audioContext.destination); 
         }
 
-        // Create a temporary, local, highly secure URL directly to the file on the device
-        const objectURL = URL.createObjectURL(file);
+        
+        const objectURL = URL.createObjectURL(selectedFile);
         audioElement.src = objectURL;
         
         // 3. Play the audio
         await audioElement.play();
         
-        // Hide UI and start drawing
+        
         container.style.display = 'none';
         draw();
 
-        // Release memory when the song ends, and return to start screen
+        
         audioElement.onended = () => {
             cancelAnimationFrame(animationId);
-            URL.revokeObjectURL(objectURL); // Clean up memory
+            URL.revokeObjectURL(objectURL); // Frigiv telefonens hukommelse
+            filePlaySection.style.display = 'none'; // Skjul play-knappen igen
             container.style.display = 'block';
             ctx.clearRect(0, 0, canvas.width, canvas.height);
         };
 
     } catch (err) {
-        alert("Could not play the selected audio file. Please try another MP3 or WAV file.");
+        alert("Browseren blokerede lyden. Sørg for at filen er en standard MP3 eller WAV, og ikke en DRM-beskyttet fil.");
         console.error(err);
     }
 });
