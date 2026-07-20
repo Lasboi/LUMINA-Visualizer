@@ -4,37 +4,29 @@
 const canvas = document.getElementById('visualizer');
 const ctx = canvas.getContext('2d');
 const container = document.getElementById('container');
-
-// Top Navigation Elements
 const backBtn = document.getElementById('backBtn');
-const volumeControl = document.getElementById('volumeControl');
-const volumeSlider = document.getElementById('volumeSlider');
-const muteIcon = document.getElementById('muteIcon');
 
-// Methods Elements
+// Control Buttons
+const loadRadioBtn = document.getElementById('loadRadioBtn');
 const radioSelect = document.getElementById('radioSelect');
-const playRadioBtn = document.getElementById('playRadioBtn');
 const audioUpload = document.getElementById('audioUpload');
-const filePlaySection = document.getElementById('filePlaySection');
-const fileNameDisplay = document.getElementById('fileNameDisplay');
-const playSelectedBtn = document.getElementById('playSelectedBtn');
-const startBtn = document.getElementById('startBtn');
+const startScreenShareBtn = document.getElementById('startScreenShareBtn');
+
+// Native Audio Player Elements (The ultimate OS bridge)
+const nativePlayerContainer = document.getElementById('nativePlayerContainer');
+const nativeAudio = document.getElementById('nativeAudio');
+const playerStatusText = document.getElementById('playerStatusText');
 
 // Audio Engine Variables
-let audioContext, analyser, globalGainNode;
-let sourceNode = null; 
-let activeAudioElement = null;
-let selectedFile = null;
-
-let isMuted = false;
-let previousVolume = 1; 
+let audioContext, analyser, sourceNode;
+let isEngineWired = false; 
 
 let time = 0;             
 let figureRotation = 0;   
 let animationId; 
 
 // ==========================================
-// 2. CANVAS SETUP
+// 2. CANVAS & 3D PROJECTION SETUP
 // ==========================================
 function resizeCanvas() {
     canvas.width = window.innerWidth;
@@ -53,7 +45,7 @@ function project(x, y, z) {
 }
 
 // ==========================================
-// 3. SHAPE GENERATION
+// 3. GENERATE 43 SHAPES (MATH LOGIC)
 // ==========================================
 const TOTAL_POINTS = 2000;
 const BASE_RADIUS = 350;
@@ -117,221 +109,125 @@ let toIndex = Math.floor(Math.random() * shapes.length);
 if (fromIndex === toIndex) toIndex = (toIndex + 1) % shapes.length;
 
 // ==========================================
-// 4. CORE AUDIO ENGINE & OS UNLOCKER
+// 4. CORE AUDIO ENGINE & NATIVE PLAYER BRIDGE
 // ==========================================
 
-// THE MAGIC TRICK: "The Silent Beep"
-// Mobile browsers lock audio hardware until a direct user tap.
-// If downloading a file or stream takes too long, the tap "expires".
-// We play a 1ms silent tone instantly to permanently unlock the audio engine.
-async function unlockAudioContext() {
-    if (!audioContext) {
-        const AudioContext = window.AudioContext || window.webkitAudioContext;
-        audioContext = new AudioContext();
-        globalGainNode = audioContext.createGain();
-        globalGainNode.connect(audioContext.destination);
-        analyser = audioContext.createAnalyser();
-        analyser.fftSize = 512;
-        analyser.connect(globalGainNode); 
-    }
-    
-    if (audioContext.state === 'suspended') {
-        await audioContext.resume();
-    }
-
-    // Play invisible silent tone to force OS hardware to turn on
-    const oscillator = audioContext.createOscillator();
-    const silentGain = audioContext.createGain();
-    silentGain.gain.value = 0; // Pure silence
-    oscillator.connect(silentGain);
-    silentGain.connect(audioContext.destination);
-    oscillator.start();
-    oscillator.stop(audioContext.currentTime + 0.01);
-}
-
-function cleanup() {
+// Global reset function
+function returnToMenu() {
     cancelAnimationFrame(animationId);
+    
+    // Completely destroy current audio pipeline
     if (sourceNode) {
-        try { sourceNode.stop(); } catch(e) {}
         sourceNode.disconnect();
         sourceNode = null;
     }
-    if (activeAudioElement) {
-        activeAudioElement.pause();
-        activeAudioElement.removeAttribute('src'); 
-        activeAudioElement.load();
-        activeAudioElement = null;
-    }
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-}
+    
+    // Stop Native Player
+    nativeAudio.pause();
+    nativeAudio.removeAttribute('src'); 
+    nativeAudio.load();
 
-function returnToMenu() {
-    cleanup();
+    // Reset UI
     container.style.display = 'block';
     backBtn.style.display = 'none';
-    volumeControl.style.display = 'none'; 
-    filePlaySection.style.display = 'none';
-    
-    playRadioBtn.innerText = "Play Radio & Visualize";
-    playRadioBtn.disabled = false;
-    playSelectedBtn.innerText = "Play File & Visualize";
-    playSelectedBtn.disabled = false;
+    nativePlayerContainer.style.display = 'none';
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 }
 backBtn.addEventListener('click', returnToMenu);
 
-// --- VOLUME SLIDER LOGIC ---
-volumeSlider.addEventListener('input', (e) => {
-    const vol = parseFloat(e.target.value);
-    if (globalGainNode) globalGainNode.gain.value = vol;
+
+// --- PREPARE THE NATIVE PLAYER (METHODS 1 & 2) ---
+
+// For Radio Streams
+loadRadioBtn.addEventListener('click', () => {
+    // Reveal the official HTML5 Media Player
+    nativePlayerContainer.style.display = 'block';
+    playerStatusText.innerText = "Radio Ready! Press the Play icon below.";
     
-    muteIcon.className = vol === 0 ? 'fa-solid fa-volume-xmark' : 
-                         vol < 0.5 ? 'fa-solid fa-volume-low' : 
-                         'fa-solid fa-volume-high';
-    isMuted = vol === 0;
-    if (!isMuted) previousVolume = vol; 
+    // Set the source of the native player
+    nativeAudio.src = radioSelect.value;
+    nativeAudio.load(); 
 });
 
-muteIcon.addEventListener('click', () => {
-    if (isMuted) {
-        isMuted = false;
-        volumeSlider.value = previousVolume > 0 ? previousVolume : 1;
-        if (globalGainNode) globalGainNode.gain.value = volumeSlider.value;
-        muteIcon.className = volumeSlider.value < 0.5 ? 'fa-solid fa-volume-low' : 'fa-solid fa-volume-high';
-    } else {
-        isMuted = true;
-        previousVolume = volumeSlider.value;
-        volumeSlider.value = 0;
-        if (globalGainNode) globalGainNode.gain.value = 0;
-        muteIcon.className = 'fa-solid fa-volume-xmark';
-    }
-});
-
-// ==========================================
-// METHOD 1: LIVE RADIO 
-// ==========================================
-playRadioBtn.addEventListener('click', async () => {
-    try {
-        const originalText = playRadioBtn.innerText;
-        playRadioBtn.innerText = "Connecting...";
-        playRadioBtn.disabled = true;
-
-        // Unlock OS Hardware instantly
-        await unlockAudioContext();
-        cleanup();
-
-        activeAudioElement = new Audio();
-        activeAudioElement.crossOrigin = "anonymous"; 
-        activeAudioElement.src = radioSelect.value;
-        
-        activeAudioElement.addEventListener('canplay', async () => {
-            try {
-                sourceNode = audioContext.createMediaElementSource(activeAudioElement);
-                sourceNode.connect(analyser);
-
-                await activeAudioElement.play();
-                
-                container.style.display = 'none';
-                backBtn.style.display = 'flex';
-                volumeControl.style.display = 'flex';
-                draw();
-
-                playRadioBtn.innerText = originalText;
-                playRadioBtn.disabled = false;
-            } catch (playError) {
-                console.error("Playback error:", playError);
-                alert("Playback blocked. Try again.");
-                playRadioBtn.innerText = "Play Radio & Visualize";
-                playRadioBtn.disabled = false;
-            }
-        }, { once: true });
-
-        activeAudioElement.addEventListener('error', () => {
-            alert("Stream failed to load.");
-            playRadioBtn.innerText = "Play Radio & Visualize";
-            playRadioBtn.disabled = false;
-        });
-
-        activeAudioElement.load();
-
-    } catch (err) {
-        alert("Failed to initialize the audio engine.");
-        playRadioBtn.innerText = "Play Radio & Visualize";
-        playRadioBtn.disabled = false;
-    }
-});
-
-// ==========================================
-// METHOD 2: LOCAL AUDIO FILE
-// ==========================================
+// For Local Audio Files
 audioUpload.addEventListener('change', function() {
-    selectedFile = this.files[0];
-    if (!selectedFile) return;
+    const file = this.files[0];
+    if (!file) return;
 
-    fileNameDisplay.innerText = "File Ready: " + selectedFile.name;
-    filePlaySection.style.display = 'block';
+    // Reveal the official HTML5 Media Player
+    nativePlayerContainer.style.display = 'block';
+    playerStatusText.innerText = `File Loaded: ${file.name} - Press Play!`;
+    
+    // Create a local blob URL for the native player
+    if (nativeAudio.src) URL.revokeObjectURL(nativeAudio.src);
+    nativeAudio.src = URL.createObjectURL(file);
+    nativeAudio.load();
 });
 
-playSelectedBtn.addEventListener('click', async () => {
-    if (!selectedFile) return;
 
-    try {
-        const originalBtnText = playSelectedBtn.innerText;
-        playSelectedBtn.innerText = "Decoding audio...";
-        playSelectedBtn.disabled = true;
-
-        // Unlock OS Hardware instantly
-        await unlockAudioContext();
-        cleanup();
-
-        const arrayBuffer = await selectedFile.arrayBuffer();
-        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-
-        sourceNode = audioContext.createBufferSource();
-        sourceNode.buffer = audioBuffer;
-        
-        sourceNode.connect(analyser); 
-        sourceNode.start(0);
-
-        container.style.display = 'none';
-        backBtn.style.display = 'flex';
-        volumeControl.style.display = 'flex';
-        draw();
-
-        sourceNode.onended = () => {
-            returnToMenu();
-        };
-
-    } catch (err) {
-        alert("Could not play the file. It might be DRM protected.");
-        playSelectedBtn.innerText = "Play File & Visualize";
-        playSelectedBtn.disabled = false;
-        console.error("File Playback Error:", err);
+// --- THE MAGIC CONNECTION (Triggers when the OS Native Player is played) ---
+// This is the golden key. We wait for the user to press 'Play' on the browser's 
+// own audio element. When that happens, the OS has fully unlocked audio hardware.
+nativeAudio.addEventListener('play', () => {
+    
+    // Initialize Web Audio Engine only when user has definitively pressed play natively
+    if (!audioContext) {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        audioContext = new AudioContext();
+        analyser = audioContext.createAnalyser();
+        analyser.fftSize = 512;
     }
+
+    if (audioContext.state === 'suspended') {
+        audioContext.resume();
+    }
+
+    // Connect the Native HTML5 Player to the 3D Visualizer Analyzer
+    if (!isEngineWired) {
+        sourceNode = audioContext.createMediaElementSource(nativeAudio);
+        sourceNode.connect(analyser);
+        analyser.connect(audioContext.destination);
+        isEngineWired = true; // Mark as wired so we don't try to reconnect on pause/play toggles
+    }
+
+    // Hide the menu and start the 3D loop!
+    container.style.display = 'none';
+    backBtn.style.display = 'flex';
+    draw();
 });
+
 
 // ==========================================
 // METHOD 3: SCREEN SHARE (Desktop Only)
 // ==========================================
-startBtn.addEventListener('click', async () => {
+// Screen sharing doesn't use the Native Player because it relies on a MediaStream
+startScreenShareBtn.addEventListener('click', async () => {
     try {
-        await unlockAudioContext();
-        cleanup();
+        if (!audioContext) {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            audioContext = new AudioContext();
+            analyser = audioContext.createAnalyser();
+            analyser.fftSize = 512;
+        }
+        if (audioContext.state === 'suspended') await audioContext.resume();
 
         const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
         
         stream.getVideoTracks()[0].onended = () => returnToMenu();
 
+        if (sourceNode) sourceNode.disconnect();
         sourceNode = audioContext.createMediaStreamSource(stream);
         sourceNode.connect(analyser);
+        analyser.connect(audioContext.destination);
         
         container.style.display = 'none';
         backBtn.style.display = 'flex';
-        volumeControl.style.display = 'flex';
         draw();
     } catch (err) {
         alert("Audio stream not found. Did you check 'Share tab audio'?");
     }
 });
+
 
 // ==========================================
 // 5. MAIN ANIMATION DRAW LOOP
