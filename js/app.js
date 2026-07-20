@@ -11,7 +11,7 @@ const volumeControl = document.getElementById('volumeControl');
 const volumeSlider = document.getElementById('volumeSlider');
 const muteIcon = document.getElementById('muteIcon');
 
-// Control Buttons
+// Methods Elements
 const radioSelect = document.getElementById('radioSelect');
 const playRadioBtn = document.getElementById('playRadioBtn');
 const audioUpload = document.getElementById('audioUpload');
@@ -20,15 +20,56 @@ const fileNameDisplay = document.getElementById('fileNameDisplay');
 const playSelectedBtn = document.getElementById('playSelectedBtn');
 const startBtn = document.getElementById('startBtn');
 
-// Audio Engine Variables
-let audioContext, analyser, globalGainNode, sourceNode, activeAudioElement;
+// Global Audio Engine Context 
+// (Created immediately to allow global touch unlocking)
+const AudioContext = window.AudioContext || window.webkitAudioContext;
+const audioContext = new AudioContext();
+const globalGainNode = audioContext.createGain();
+globalGainNode.gain.value = 1; // Default Volume
+globalGainNode.connect(audioContext.destination);
+const analyser = audioContext.createAnalyser();
+analyser.fftSize = 512;
+analyser.connect(globalGainNode);
+
+let sourceNode = null; 
+let activeAudioElement = null;
 let selectedFile = null;
 let isMuted = false;
 let previousVolume = 1; 
-
 let time = 0;             
 let figureRotation = 0;   
 let animationId; 
+
+// ==========================================
+// THE GLOBAL TOUCH UNLOCKER (MOBILE FIX)
+// ==========================================
+// This instantly binds to ANY touch on the screen. 
+// It guarantees the OS hardware wakes up before the user even hits play.
+let isAudioUnlocked = false;
+function unlockAudio() {
+    if (isAudioUnlocked) return;
+    
+    // Force resume the context
+    if (audioContext.state === 'suspended') {
+        audioContext.resume();
+    }
+    
+    // Play a blank, 0-second buffer to initialize mobile speakers
+    const buffer = audioContext.createBuffer(1, 1, 22050);
+    const unlockSource = audioContext.createBufferSource();
+    unlockSource.buffer = buffer;
+    unlockSource.connect(audioContext.destination);
+    unlockSource.start(0);
+    
+    isAudioUnlocked = true;
+    
+    // Remove listeners once unlocked to save CPU
+    document.removeEventListener('touchstart', unlockAudio);
+    document.removeEventListener('click', unlockAudio);
+}
+document.addEventListener('touchstart', unlockAudio, { passive: true });
+document.addEventListener('click', unlockAudio, { passive: true });
+
 
 // ==========================================
 // 2. CANVAS SETUP
@@ -113,44 +154,16 @@ let fromIndex = Math.floor(Math.random() * shapes.length);
 let toIndex = Math.floor(Math.random() * shapes.length);
 if (fromIndex === toIndex) toIndex = (toIndex + 1) % shapes.length;
 
-
 // ==========================================
-// 4. CORE AUDIO ENGINE & OS UNLOCKER
+// 4. CORE AUDIO ENGINE & NAVIGATION
 // ==========================================
 
-// THE PHANTOM BEEP: Solves the dreaded mobile "Timeout" block.
-// This function runs synchronously on the exact millisecond the user clicks a button.
-// It plays a completely silent tone that forces the mobile OS hardware to wake up permanently.
-function unlockAudioContextSync() {
-    if (!audioContext) {
-        const AudioContext = window.AudioContext || window.webkitAudioContext;
-        audioContext = new AudioContext();
-        globalGainNode = audioContext.createGain();
-        globalGainNode.connect(audioContext.destination);
-        analyser = audioContext.createAnalyser();
-        analyser.fftSize = 512;
-        analyser.connect(globalGainNode); 
-    }
-    
-    if (audioContext.state === 'suspended') {
-        audioContext.resume();
-    }
-
-    // Generate a 0.0001 second empty buffer and play it to trick the OS into unlocking
-    const buffer = audioContext.createBuffer(1, 1, 22050);
-    const dummyNode = audioContext.createBufferSource();
-    dummyNode.buffer = buffer;
-    dummyNode.connect(audioContext.destination);
-    dummyNode.start(0);
-}
-
-// Complete teardown of all audio layers to prevent ghost-playing
 function cleanup() {
     cancelAnimationFrame(animationId);
     
     if (sourceNode) {
         try { sourceNode.stop(); } catch(e) {}
-        sourceNode.disconnect();
+        try { sourceNode.disconnect(); } catch(e) {}
         sourceNode = null;
     }
     
@@ -158,18 +171,12 @@ function cleanup() {
         activeAudioElement.pause();
         activeAudioElement.removeAttribute('src'); 
         activeAudioElement.load();
-        
-        // Remove the invisible element from the DOM to free RAM
-        if (activeAudioElement.parentNode) {
-            activeAudioElement.parentNode.removeChild(activeAudioElement);
-        }
         activeAudioElement = null;
     }
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 }
 
-// Global reset function
 function returnToMenu() {
     cleanup();
     container.style.display = 'block';
@@ -184,12 +191,12 @@ function returnToMenu() {
 }
 backBtn.addEventListener('click', returnToMenu);
 
-
 // --- VOLUME SLIDER LOGIC ---
 volumeSlider.addEventListener('input', (e) => {
     const vol = parseFloat(e.target.value);
     
     if (globalGainNode) globalGainNode.gain.value = vol;
+    if (activeAudioElement) activeAudioElement.volume = vol;
     
     muteIcon.className = vol === 0 ? 'fa-solid fa-volume-xmark' : 
                          vol < 0.5 ? 'fa-solid fa-volume-low' : 
@@ -204,17 +211,18 @@ muteIcon.addEventListener('click', () => {
         isMuted = false;
         volumeSlider.value = previousVolume > 0 ? previousVolume : 1;
         if (globalGainNode) globalGainNode.gain.value = volumeSlider.value;
+        if (activeAudioElement) activeAudioElement.volume = volumeSlider.value;
         muteIcon.className = volumeSlider.value < 0.5 ? 'fa-solid fa-volume-low' : 'fa-solid fa-volume-high';
     } else {
         isMuted = true;
         previousVolume = volumeSlider.value;
         volumeSlider.value = 0;
         if (globalGainNode) globalGainNode.gain.value = 0;
+        if (activeAudioElement) activeAudioElement.volume = 0;
         muteIcon.className = 'fa-solid fa-volume-xmark';
     }
 });
 
-// A helper function to jumpstart visuals
 function startVisuals() {
     container.style.display = 'none';
     backBtn.style.display = 'flex';
@@ -223,36 +231,34 @@ function startVisuals() {
 }
 
 // ==========================================
-// METHOD 1: LIVE RADIO 
+// METHOD 1: LIVE RADIO
 // ==========================================
 playRadioBtn.addEventListener('click', () => {
-    // 1. INSTANT UNLOCK (No awaits allowed before this point)
-    unlockAudioContextSync();
     cleanup();
+    
+    // Resume context if needed
+    if (audioContext.state === 'suspended') {
+        audioContext.resume();
+    }
 
     const originalText = playRadioBtn.innerText;
-    playRadioBtn.innerText = "Connecting to Radio...";
+    playRadioBtn.innerText = "Connecting...";
     playRadioBtn.disabled = true;
 
-    // 2. Attach an invisible element to the DOM so Mobile browsers don't "garbage collect" it
-    activeAudioElement = document.createElement("audio");
-    document.body.appendChild(activeAudioElement);
-    
+    activeAudioElement = new Audio();
     activeAudioElement.crossOrigin = "anonymous"; 
     activeAudioElement.src = radioSelect.value;
+    activeAudioElement.volume = parseFloat(volumeSlider.value);
     
-    // 3. Connect routing
     sourceNode = audioContext.createMediaElementSource(activeAudioElement);
     sourceNode.connect(analyser);
 
-    // 4. Play immediately
     activeAudioElement.play().then(() => {
         startVisuals();
         playRadioBtn.innerText = originalText;
         playRadioBtn.disabled = false;
     }).catch(err => {
-        console.error("Playback error:", err);
-        alert("The browser blocked playback. Please check your internet connection and try again.");
+        alert("The browser blocked playback. CORS or mobile Autoplay policy.");
         playRadioBtn.innerText = "Play Radio & Visualize";
         playRadioBtn.disabled = false;
     });
@@ -260,8 +266,9 @@ playRadioBtn.addEventListener('click', () => {
 
 
 // ==========================================
-// METHOD 2: LOCAL AUDIO FILE 
+// METHOD 2: LOCAL AUDIO FILE (FileReader Decoder)
 // ==========================================
+// We use FileReader instead of objectURL to guarantee Android compatibility
 audioUpload.addEventListener('change', function() {
     selectedFile = this.files[0];
     if (!selectedFile) return;
@@ -273,40 +280,49 @@ audioUpload.addEventListener('change', function() {
 playSelectedBtn.addEventListener('click', () => {
     if (!selectedFile) return;
 
-    // 1. INSTANT UNLOCK (No awaits allowed before this point)
-    unlockAudioContextSync();
+    if (audioContext.state === 'suspended') {
+        audioContext.resume();
+    }
+    
     cleanup();
 
     const originalBtnText = playSelectedBtn.innerText;
-    playSelectedBtn.innerText = "Starting File...";
+    playSelectedBtn.innerText = "Decoding audio...";
     playSelectedBtn.disabled = true;
 
-    // 2. We use ObjectURL instead of decoding buffers to save mobile RAM
-    const objectURL = URL.createObjectURL(selectedFile);
+    // Use FileReader to read the file entirely in memory before decoding.
+    // This removes any dependencies on HTML5 Audio elements, eliminating mobile muting.
+    const reader = new FileReader();
     
-    // 3. Attach an invisible element to the DOM
-    activeAudioElement = document.createElement("audio");
-    document.body.appendChild(activeAudioElement);
-    activeAudioElement.src = objectURL;
-    
-    // 4. Connect routing
-    sourceNode = audioContext.createMediaElementSource(activeAudioElement);
-    sourceNode.connect(analyser);
+    reader.onload = async function(e) {
+        try {
+            const audioData = e.target.result;
+            const decodedBuffer = await audioContext.decodeAudioData(audioData);
+            
+            sourceNode = audioContext.createBufferSource();
+            sourceNode.buffer = decodedBuffer;
+            sourceNode.connect(analyser);
+            sourceNode.start(0);
 
-    // 5. Play immediately
-    activeAudioElement.play().then(() => {
-        startVisuals();
-        
-        activeAudioElement.onended = () => {
-            URL.revokeObjectURL(objectURL);
-            returnToMenu();
-        };
-    }).catch(err => {
-        alert("Could not play the file. It might be an unsupported format.");
+            startVisuals();
+            
+            sourceNode.onended = () => {
+                returnToMenu();
+            };
+        } catch (err) {
+            alert("Could not decode audio. The format might be unsupported.");
+            playSelectedBtn.innerText = "Play File & Visualize";
+            playSelectedBtn.disabled = false;
+        }
+    };
+    
+    reader.onerror = function() {
+        alert("Error reading file.");
         playSelectedBtn.innerText = "Play File & Visualize";
         playSelectedBtn.disabled = false;
-        console.error("File Playback Error:", err);
-    });
+    };
+
+    reader.readAsArrayBuffer(selectedFile);
 });
 
 
@@ -315,7 +331,9 @@ playSelectedBtn.addEventListener('click', () => {
 // ==========================================
 startBtn.addEventListener('click', async () => {
     try {
-        unlockAudioContextSync();
+        if (audioContext.state === 'suspended') {
+            audioContext.resume();
+        }
         cleanup();
 
         const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
@@ -330,7 +348,6 @@ startBtn.addEventListener('click', async () => {
         startVisuals();
     } catch (err) {
         alert("Audio stream not found. Please click 'Connect Audio' again and remember to toggle 'Share tab audio'.");
-        console.error("Screen Share Error:", err);
     }
 });
 
