@@ -13,21 +13,28 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-    <!-- Top Left: Back Button (Hidden during menu) -->
+    <!-- Top Navigation Elements -->
     <button id="backBtn" class="top-nav-btn back-btn" style="display: none;">
         <i class="fa-solid fa-arrow-left"></i> Menu
     </button>
+
+    <div id="volumeControl" class="top-nav-btn volume-container" style="display: none;">
+        <i id="muteIcon" class="fa-solid fa-volume-high"></i>
+        <input type="range" id="volumeSlider" min="0" max="1" step="0.01" value="1">
+    </div>
 
     <!-- Main Menu UI -->
     <div id="container">
         <h1>LUMINA - Immersive Audio</h1>
         
         <div class="instructions">
-            <p class="subtitle">Select your audio source, then press play on the media player.</p>
+            <p class="subtitle">Choose your preferred audio source to start the visualizer.</p>
 
             <!-- METHOD 1: LIVE RADIO -->
             <div class="method-card">
                 <strong class="method-title"><i class="fa-solid fa-radio"></i> Method 1: Live Radio</strong>
+                <p class="method-desc">Stream live internet radio directly. Guaranteed to work on mobile and desktop.</p>
+                
                 <select id="radioSelect" class="dropdown-select">
                     <option value="https://ice1.somafm.com/groovesalad-128-mp3">Groove Salad (Chill/Downtempo)</option>
                     <option value="https://ice1.somafm.com/defcon-128-mp3">DEF CON Radio (Electronic/Hacking)</option>
@@ -37,37 +44,35 @@
                     <option value="https://ice1.somafm.com/beatblender-128-mp3">Beat Blender (Deep House/Chill)</option>
                     <option value="https://ice1.somafm.com/dubstep-128-mp3">Dub Step Beyond (Bass/Dubstep)</option>
                 </select>
+                
                 <div class="btn-wrapper">
-                    <button id="loadRadioBtn" class="action-btn radio-btn">Load Radio Station</button>
+                    <button id="playRadioBtn" class="action-btn radio-btn">Play Radio & Visualize</button>
                 </div>
             </div>
 
             <!-- METHOD 2: LOCAL AUDIO FILE -->
             <div class="method-card">
                 <strong class="method-title"><i class="fa-solid fa-file-audio"></i> Method 2: Local Audio File</strong>
-                <p class="method-desc" style="margin-top: 5px;">Select any MP3, WAV, FLAC, or OGG file from your device.</p>
+                <p class="method-desc">Select any music file (MP3, WAV, FLAC, OGG) from your device.</p>
+                
                 <div class="btn-wrapper">
                     <input type="file" id="audioUpload" accept="audio/*" style="display: none;">
-                    <label for="audioUpload" class="action-btn file-btn">Browse Files</label>
+                    <label for="audioUpload" class="action-btn file-btn">Select Audio File</label>
+                </div>
+
+                <div id="filePlaySection" class="hidden-section">
+                    <p id="fileNameDisplay" class="file-name"></p>
+                    <button id="playSelectedBtn" class="action-btn play-file-btn">Play File & Visualize</button>
                 </div>
             </div>
 
-            <!-- METHOD 3: SCREEN SHARE (Desktop Only) -->
+            <!-- METHOD 3: SCREEN SHARE -->
             <div class="method-card desktop-only">
                 <strong class="method-title"><i class="fa-solid fa-desktop"></i> Method 3: Screen Share</strong>
-                <p class="method-desc" style="margin-top: 5px;">Play Spotify/YouTube in another tab and share it.</p>
+                <p class="method-desc">Play Spotify/YouTube in another tab. Share that tab to visualize it.</p>
                 <div class="btn-wrapper">
-                    <button id="startScreenShareBtn" class="action-btn desktop-btn">Connect Tab Audio</button>
+                    <button id="startBtn" class="action-btn desktop-btn">Connect Tab Audio</button>
                 </div>
-            </div>
-
-            <!-- THE NATIVE MOBILE PLAYER -->
-            <!-- This is the official browser media player that Android OS completely trusts -->
-            <div id="nativePlayerContainer" class="native-player-box" style="display: none;">
-                <p id="playerStatusText" style="color: #00e5ff; font-weight: bold; margin-bottom: 10px; font-size: 1.1em;">
-                    <i class="fa-solid fa-unlock-keyhole"></i> Audio Unlocked! Press Play below:
-                </p>
-                <audio id="nativeAudio" controls crossorigin="anonymous" style="width: 100%; outline: none; border-radius: 8px;"></audio>
             </div>
         </div>
     </div>
