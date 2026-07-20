@@ -20,8 +20,15 @@ const fileNameDisplay = document.getElementById('fileNameDisplay');
 const playSelectedBtn = document.getElementById('playSelectedBtn');
 const startBtn = document.getElementById('startBtn');
 
-// Audio Engine Variables
-let audioContext, analyser, globalGainNode, sourceNode, activeAudioElement;
+// ==========================================
+// THE PARALLEL AUDIO ENGINE VARIABLES
+// ==========================================
+// 1. THE SOUND MAKER (Standard HTML5 element. Immune to mobile muting bugs)
+const speakerAudio = new Audio(); 
+
+// 2. THE VISUAL MAKER (Web Audio API. Math only. Does NOT connect to device speakers)
+let audioContext, analyser, globalGainNode, sourceNode, visualAudioElement;
+
 let selectedFile = null;
 let isMuted = false;
 let previousVolume = 1; 
@@ -115,20 +122,23 @@ if (fromIndex === toIndex) toIndex = (toIndex + 1) % shapes.length;
 
 
 // ==========================================
-// 4. CORE AUDIO ENGINE & OS UNLOCKER
+// 4. THE PARALLEL AUDIO ENGINE
 // ==========================================
+// This is the absolute cure for mobile Web Audio API muting.
+// We completely separate the Audio output from the Visual calculations.
 
 async function initAudioContext() {
     if (!audioContext) {
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         audioContext = new AudioContext();
         
+        // The GainNode is used for Desktop Screen Share ONLY.
         globalGainNode = audioContext.createGain();
         globalGainNode.connect(audioContext.destination);
         
         analyser = audioContext.createAnalyser();
         analyser.fftSize = 512;
-        analyser.connect(globalGainNode); 
+        // Notice: We don't connect analyser to globalGainNode permanently here!
     }
     
     if (audioContext.state === 'suspended') {
@@ -136,29 +146,36 @@ async function initAudioContext() {
     }
 }
 
-// Complete teardown of all audio layers to prevent ghost-playing
+// Complete teardown of all audio layers
 function cleanup() {
     cancelAnimationFrame(animationId);
     
-    // Stop local file BufferSource
+    // Stop OS Speaker Output
+    speakerAudio.pause();
+    speakerAudio.removeAttribute('src'); 
+    speakerAudio.load();
+    
+    // Stop Visual Audio fetchers
+    if (visualAudioElement) {
+        visualAudioElement.pause();
+        visualAudioElement.removeAttribute('src');
+        visualAudioElement.load();
+        visualAudioElement = null;
+    }
+
     if (sourceNode) {
         try { sourceNode.stop(); } catch(e) {}
         try { sourceNode.disconnect(); } catch(e) {}
         sourceNode = null;
     }
     
-    // Stop DOM-anchored Radio Player
-    if (activeAudioElement) {
-        activeAudioElement.pause();
-        activeAudioElement.removeAttribute('src'); 
-        activeAudioElement.load();
-        activeAudioElement = null;
+    if (analyser) {
+        try { analyser.disconnect(); } catch(e) {}
     }
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 }
 
-// Hide visualizer, reset to main menu
 function returnToMenu() {
     cleanup();
     container.style.display = 'block';
@@ -178,11 +195,11 @@ backBtn.addEventListener('click', returnToMenu);
 volumeSlider.addEventListener('input', (e) => {
     const vol = parseFloat(e.target.value);
     
-    // Apply volume to AudioContext Master Node
-    if (globalGainNode) globalGainNode.gain.value = vol;
+    // Controls Radio & Local Files
+    speakerAudio.volume = vol; 
     
-    // Also apply to HTML5 audio element if it's currently active (Radio)
-    if (activeAudioElement) activeAudioElement.volume = vol;
+    // Controls Desktop Screen Share
+    if (globalGainNode) globalGainNode.gain.value = vol; 
     
     muteIcon.className = vol === 0 ? 'fa-solid fa-volume-xmark' : 
                          vol < 0.5 ? 'fa-solid fa-volume-low' : 
@@ -196,15 +213,15 @@ muteIcon.addEventListener('click', () => {
     if (isMuted) {
         isMuted = false;
         volumeSlider.value = previousVolume > 0 ? previousVolume : 1;
+        speakerAudio.volume = volumeSlider.value;
         if (globalGainNode) globalGainNode.gain.value = volumeSlider.value;
-        if (activeAudioElement) activeAudioElement.volume = volumeSlider.value;
         muteIcon.className = volumeSlider.value < 0.5 ? 'fa-solid fa-volume-low' : 'fa-solid fa-volume-high';
     } else {
         isMuted = true;
         previousVolume = volumeSlider.value;
         volumeSlider.value = 0;
+        speakerAudio.volume = 0;
         if (globalGainNode) globalGainNode.gain.value = 0;
-        if (activeAudioElement) activeAudioElement.volume = 0;
         muteIcon.className = 'fa-solid fa-volume-xmark';
     }
 });
@@ -217,7 +234,7 @@ function startVisuals() {
 }
 
 // ==========================================
-// METHOD 1: LIVE RADIO (Standard HTML5 Audio)
+// METHOD 1: LIVE RADIO (Parallel Tracks)
 // ==========================================
 playRadioBtn.addEventListener('click', async () => {
     try {
@@ -228,52 +245,45 @@ playRadioBtn.addEventListener('click', async () => {
         await initAudioContext();
         cleanup();
 
-        // Standard robust HTML5 element for endless streams (Maintains desktop compatibility)
-        activeAudioElement = new Audio();
-        activeAudioElement.crossOrigin = "anonymous"; 
-        activeAudioElement.src = radioSelect.value;
-        activeAudioElement.volume = parseFloat(volumeSlider.value);
+        // TRACK 1: The Sound Maker (Guaranteed to play on Mobile)
+        speakerAudio.src = radioSelect.value;
+        speakerAudio.volume = parseFloat(volumeSlider.value);
         
-        activeAudioElement.addEventListener('canplay', async () => {
-            try {
-                sourceNode = audioContext.createMediaElementSource(activeAudioElement);
-                sourceNode.connect(analyser);
+        // TRACK 2: The Visual Maker (Muted, reads data only)
+        visualAudioElement = new Audio();
+        visualAudioElement.crossOrigin = "anonymous"; 
+        visualAudioElement.src = radioSelect.value;
+        visualAudioElement.muted = true; // Prevents echo
+        
+        // Connect Visual Maker to Analyser (Notice it NEVER connects to audioContext.destination)
+        sourceNode = audioContext.createMediaElementSource(visualAudioElement);
+        sourceNode.connect(analyser);
 
-                await activeAudioElement.play();
-                
-                startVisuals();
-                playRadioBtn.innerText = originalText;
-                playRadioBtn.disabled = false;
-            } catch (playError) {
-                console.error("Playback error:", playError);
-                alert("The browser blocked playback. Please interact with the page first.");
-                playRadioBtn.innerText = "Play Radio & Visualize";
-                playRadioBtn.disabled = false;
-            }
-        }, { once: true });
-
-        activeAudioElement.addEventListener('error', (e) => {
-            console.error("Audio Element Error:", e);
-            alert("Stream failed to load. The radio station server blocked access (CORS) or the stream is currently offline.");
+        // Start both simultaneously
+        Promise.all([
+            speakerAudio.play(),
+            visualAudioElement.play()
+        ]).then(() => {
+            startVisuals();
+            playRadioBtn.innerText = originalText;
+            playRadioBtn.disabled = false;
+        }).catch(err => {
+            alert("The browser blocked playback. Please interact with the page first.");
             playRadioBtn.innerText = "Play Radio & Visualize";
             playRadioBtn.disabled = false;
         });
-
-        activeAudioElement.load();
 
     } catch (err) {
         alert("Failed to initialize the audio engine.");
         playRadioBtn.innerText = "Play Radio & Visualize";
         playRadioBtn.disabled = false;
-        console.error("Radio Error:", err);
     }
 });
 
 
 // ==========================================
-// METHOD 2: LOCAL AUDIO FILE (FileReader Decoder)
+// METHOD 2: LOCAL AUDIO FILE (Parallel Tracks)
 // ==========================================
-// Uses FileReader + decodeAudioData to guarantee mobile playback
 audioUpload.addEventListener('change', function() {
     selectedFile = this.files[0];
     if (!selectedFile) return;
@@ -293,44 +303,34 @@ playSelectedBtn.addEventListener('click', async () => {
         await initAudioContext();
         cleanup();
 
-        // Read file entirely into memory before decoding to bypass mobile MediaElement muting
-        const reader = new FileReader();
-        
-        reader.onload = async function(e) {
-            try {
-                const audioData = e.target.result;
-                const decodedBuffer = await audioContext.decodeAudioData(audioData);
-                
-                sourceNode = audioContext.createBufferSource();
-                sourceNode.buffer = decodedBuffer;
-                sourceNode.connect(analyser);
-                sourceNode.start(0);
+        // TRACK 1: The Sound Maker
+        const objectURL = URL.createObjectURL(selectedFile);
+        speakerAudio.src = objectURL;
+        speakerAudio.volume = parseFloat(volumeSlider.value);
 
-                startVisuals();
-                
-                sourceNode.onended = () => {
-                    returnToMenu();
-                };
-            } catch (err) {
-                alert("Could not decode audio. The format might be unsupported.");
-                playSelectedBtn.innerText = "Play File & Visualize";
-                playSelectedBtn.disabled = false;
-            }
-        };
+        // TRACK 2: The Visual Maker
+        const arrayBuffer = await selectedFile.arrayBuffer();
+        const decodedBuffer = await audioContext.decodeAudioData(arrayBuffer);
         
-        reader.onerror = function() {
-            alert("Error reading file.");
-            playSelectedBtn.innerText = "Play File & Visualize";
-            playSelectedBtn.disabled = false;
-        };
+        sourceNode = audioContext.createBufferSource();
+        sourceNode.buffer = decodedBuffer;
+        sourceNode.connect(analyser); // Analyser is NOT connected to destination
 
-        reader.readAsArrayBuffer(selectedFile);
+        // Start both simultaneously
+        speakerAudio.play().then(() => {
+            sourceNode.start(0);
+            startVisuals();
+        });
+        
+        speakerAudio.onended = () => {
+            URL.revokeObjectURL(objectURL);
+            returnToMenu();
+        };
 
     } catch (err) {
-        alert("Could not play the file.");
+        alert("Could not play the file. It might be DRM protected.");
         playSelectedBtn.innerText = "Play File & Visualize";
         playSelectedBtn.disabled = false;
-        console.error("File Playback Error:", err);
     }
 });
 
@@ -349,13 +349,15 @@ startBtn.addEventListener('click', async () => {
             returnToMenu();
         };
 
+        // For Screen Share, we DO connect the analyser to the Global Gain Node
+        // Because Web Audio API is fully supported on Desktop OS without muting it.
         sourceNode = audioContext.createMediaStreamSource(stream);
         sourceNode.connect(analyser);
+        analyser.connect(globalGainNode);
         
         startVisuals();
     } catch (err) {
         alert("Audio stream not found. Please click 'Connect Audio' again and remember to toggle 'Share tab audio'.");
-        console.error("Screen Share Error:", err);
     }
 });
 
