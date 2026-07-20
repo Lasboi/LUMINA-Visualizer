@@ -4,6 +4,7 @@
 const canvas = document.getElementById('visualizer');
 const ctx = canvas.getContext('2d');
 const container = document.getElementById('container');
+const backBtn = document.getElementById('backBtn'); // Global Back Button
 
 // Method 1: Radio Elements
 const radioSelect = document.getElementById('radioSelect');
@@ -586,8 +587,25 @@ if (fromIndex === toIndex) toIndex = (toIndex + 1) % shapes.length;
 
 
 // ==========================================
-// 4. SHARED AUDIO CONTEXT INITIALIZATION
+// 4. SHARED AUDIO CONTEXT & NAVIGATION LOGIC
 // ==========================================
+
+// Global logic to return to the main menu
+function returnToMenu() {
+    cancelAnimationFrame(animationId);
+    cleanupSource();
+    container.style.display = 'block';
+    backBtn.style.display = 'none';
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Reset all buttons in case they were left disabled
+    playRadioBtn.innerText = "Play Radio & Visualize";
+    playRadioBtn.disabled = false;
+    playSelectedBtn.innerText = "Play File & Visualize";
+    playSelectedBtn.disabled = false;
+}
+backBtn.addEventListener('click', returnToMenu);
+
 async function initAudioContext() {
     const AudioContext = window.AudioContext || window.webkitAudioContext;
     if (!audioContext) {
@@ -598,10 +616,11 @@ async function initAudioContext() {
     }
 }
 
-// Cleans up the previous source to prevent audio overlap
+// Cleans up the previous source completely to prevent overlapping audio/memory leaks
 function cleanupSource() {
     if (source) {
-        source.disconnect();
+        try { source.disconnect(); } catch(e){}
+        try { source.stop(); } catch(e){} // Used if it's an AudioBufferSourceNode
         source = null;
     }
     if (audioElement) {
@@ -625,15 +644,12 @@ playRadioBtn.addEventListener('click', async () => {
         await initAudioContext();
         cleanupSource();
 
-        // Connect directly to the radio stream without a free CORS proxy
-        // NOTE: The radio server must have CORS open. SomaFM supports this natively.
         const targetStreamUrl = radioSelect.value;
 
         audioElement = new Audio();
-        audioElement.crossOrigin = "anonymous"; // Must be set before assigning the src
+        audioElement.crossOrigin = "anonymous"; 
         audioElement.src = targetStreamUrl;
         
-        // Wait for the audio element to buffer enough data to play safely
         audioElement.addEventListener('canplay', async () => {
             try {
                 source = audioContext.createMediaElementSource(audioElement);
@@ -646,7 +662,9 @@ playRadioBtn.addEventListener('click', async () => {
 
                 await audioElement.play();
                 
+                // Show Back Button, Hide Menu, Start Visuals
                 container.style.display = 'none';
+                backBtn.style.display = 'flex';
                 draw();
 
                 playRadioBtn.innerText = originalText;
@@ -659,15 +677,13 @@ playRadioBtn.addEventListener('click', async () => {
             }
         }, { once: true });
 
-        // Catch errors if the server denies access (CORS failure) or is offline
         audioElement.addEventListener('error', (e) => {
             console.error("Audio Element Error:", e);
-            alert("Stream failed to load. The radio station server blocked access (CORS) or the stream is currently offline. Please try SomaFM.");
+            alert("Stream failed to load. The radio station server blocked access (CORS) or the stream is currently offline.");
             playRadioBtn.innerText = "Play Radio & Visualize";
             playRadioBtn.disabled = false;
         });
 
-        // Force the browser to start loading the stream
         audioElement.load();
 
     } catch (err) {
@@ -701,7 +717,7 @@ playSelectedBtn.addEventListener('click', async () => {
         await initAudioContext();
         cleanupSource();
 
-        // We decode raw binary data to bypass all mobile DRM/Autoplay/MediaElement bugs
+        // We decode raw binary data to bypass all mobile DRM/Autoplay bugs
         const arrayBuffer = await selectedFile.arrayBuffer();
         const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
 
@@ -717,16 +733,14 @@ playSelectedBtn.addEventListener('click', async () => {
         analyser.connect(audioContext.destination);
         source.start(0);
 
+        // Show Back Button, Hide Menu, Start Visuals
         container.style.display = 'none';
+        backBtn.style.display = 'flex';
         draw();
 
+        // When the song ends naturally, return to menu
         source.onended = () => {
-            cancelAnimationFrame(animationId);
-            filePlaySection.style.display = 'none';
-            playSelectedBtn.innerText = originalBtnText;
-            playSelectedBtn.disabled = false;
-            container.style.display = 'block';
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            returnToMenu();
         };
 
     } catch (err) {
@@ -748,11 +762,9 @@ startBtn.addEventListener('click', async () => {
 
         const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
         
+        // Listen for the user clicking the browser's native "Stop Sharing" button
         stream.getVideoTracks()[0].onended = () => {
-            cancelAnimationFrame(animationId);
-            cleanupSource();
-            container.style.display = 'block';
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            returnToMenu();
         };
 
         source = audioContext.createMediaStreamSource(stream);
@@ -762,7 +774,9 @@ startBtn.addEventListener('click', async () => {
         }
         source.connect(analyser);
         
+        // Show Back Button, Hide Menu, Start Visuals
         container.style.display = 'none';
+        backBtn.style.display = 'flex';
         draw();
     } catch (err) {
         alert("Audio stream not found. Please click 'Connect Audio' again and remember to toggle 'Share tab audio'.");

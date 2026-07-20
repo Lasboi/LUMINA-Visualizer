@@ -12,6 +12,34 @@ body, html {
     align-items: center;       
 }
 
+/* Back Button for returning to menu */
+.back-btn {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    z-index: 200;
+    background: rgba(15, 15, 20, 0.85);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.back-btn:hover {
+    background: rgba(255, 0, 127, 0.9);
+    border-color: #ff007f;
+    box-shadow: 0 0 15px #ff007f;
+    transform: scale(1.05);
+}
+
 /* Container for the welcome message */
 #container {
     position: relative; 
