@@ -5,30 +5,25 @@ const canvas = document.getElementById('visualizer');
 const ctx = canvas.getContext('2d');
 const container = document.getElementById('container');
 
-// Top Navigation & Media Elements
+// Top Navigation Elements
 const backBtn = document.getElementById('backBtn');
 const volumeControl = document.getElementById('volumeControl');
 const volumeSlider = document.getElementById('volumeSlider');
 const muteIcon = document.getElementById('muteIcon');
-const corePlayer = document.getElementById('corePlayer'); // The DOM-attached media anchor
 
-// Method 1: Radio
+// Methods Elements
 const radioSelect = document.getElementById('radioSelect');
 const playRadioBtn = document.getElementById('playRadioBtn');
-
-// Method 2: Local File
 const audioUpload = document.getElementById('audioUpload');
 const filePlaySection = document.getElementById('filePlaySection');
 const fileNameDisplay = document.getElementById('fileNameDisplay');
 const playSelectedBtn = document.getElementById('playSelectedBtn');
-
-// Method 3: Desktop Screen Share
 const startBtn = document.getElementById('startBtn');
 
 // Audio Engine Variables
 let audioContext, analyser, globalGainNode;
-let bufferSource = null; // Used exclusively for decoding Local Files & Screen Share
-let isCorePlayerConnected = false; // Tracks if the HTML radio player has been bound to the analyser
+let sourceNode = null; 
+let activeAudioElement = null;
 let selectedFile = null;
 
 let isMuted = false;
@@ -39,7 +34,7 @@ let figureRotation = 0;
 let animationId; 
 
 // ==========================================
-// 2. CANVAS & 3D PROJECTION SETUP
+// 2. CANVAS SETUP
 // ==========================================
 function resizeCanvas() {
     canvas.width = window.innerWidth;
@@ -50,20 +45,15 @@ resizeCanvas();
 
 const focalLength = 900;
 const camZ = -1400; 
-
 function project(x, y, z) {
     const rz = z - camZ;
     if (rz <= 0) return null; 
     const scale = focalLength / rz;
-    return {
-        x: (canvas.width / 2) + (x * scale),
-        y: (canvas.height / 2) + (y * scale),
-        scale: scale
-    };
+    return { x: (canvas.width / 2) + (x * scale), y: (canvas.height / 2) + (y * scale), scale: scale };
 }
 
 // ==========================================
-// 3. GENERATE 43 SHAPES (MATH LOGIC)
+// 3. SHAPE GENERATION
 // ==========================================
 const TOTAL_POINTS = 2000;
 const BASE_RADIUS = 350;
@@ -121,26 +111,25 @@ for (let i = 0; i < NUM_STARS; i++) {
     stars.push({ x: (Math.random() - 0.5) * 6000, y: (Math.random() - 0.5) * 6000, z: Math.random() * 6000 });
 }
 
-// State Machine Initialization
 let lastCycle = -1;
 let fromIndex = Math.floor(Math.random() * shapes.length);
 let toIndex = Math.floor(Math.random() * shapes.length);
 if (fromIndex === toIndex) toIndex = (toIndex + 1) % shapes.length;
 
-
 // ==========================================
-// 4. CORE AUDIO ENGINE & NAVIGATION
+// 4. CORE AUDIO ENGINE & OS UNLOCKER
 // ==========================================
 
-// Safely boot up Web Audio engine
-async function initAudioContext() {
+// THE MAGIC TRICK: "The Silent Beep"
+// Mobile browsers lock audio hardware until a direct user tap.
+// If downloading a file or stream takes too long, the tap "expires".
+// We play a 1ms silent tone instantly to permanently unlock the audio engine.
+async function unlockAudioContext() {
     if (!audioContext) {
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         audioContext = new AudioContext();
-        
         globalGainNode = audioContext.createGain();
         globalGainNode.connect(audioContext.destination);
-        
         analyser = audioContext.createAnalyser();
         analyser.fftSize = 512;
         analyser.connect(globalGainNode); 
@@ -149,28 +138,33 @@ async function initAudioContext() {
     if (audioContext.state === 'suspended') {
         await audioContext.resume();
     }
+
+    // Play invisible silent tone to force OS hardware to turn on
+    const oscillator = audioContext.createOscillator();
+    const silentGain = audioContext.createGain();
+    silentGain.gain.value = 0; // Pure silence
+    oscillator.connect(silentGain);
+    silentGain.connect(audioContext.destination);
+    oscillator.start();
+    oscillator.stop(audioContext.currentTime + 0.01);
 }
 
-// Complete teardown of all audio layers to prevent ghost-playing
 function cleanup() {
     cancelAnimationFrame(animationId);
-    
-    // Stop local file BufferSource
-    if (bufferSource) {
-        try { bufferSource.stop(); } catch(e) {}
-        bufferSource.disconnect();
-        bufferSource = null;
+    if (sourceNode) {
+        try { sourceNode.stop(); } catch(e) {}
+        sourceNode.disconnect();
+        sourceNode = null;
     }
-    
-    // Stop DOM-anchored Radio Player
-    corePlayer.pause();
-    corePlayer.removeAttribute('src'); 
-    corePlayer.load();
-
+    if (activeAudioElement) {
+        activeAudioElement.pause();
+        activeAudioElement.removeAttribute('src'); 
+        activeAudioElement.load();
+        activeAudioElement = null;
+    }
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 }
 
-// Hide visualizer, reset to main menu
 function returnToMenu() {
     cleanup();
     container.style.display = 'block';
@@ -185,18 +179,14 @@ function returnToMenu() {
 }
 backBtn.addEventListener('click', returnToMenu);
 
-
 // --- VOLUME SLIDER LOGIC ---
 volumeSlider.addEventListener('input', (e) => {
     const vol = parseFloat(e.target.value);
-    
     if (globalGainNode) globalGainNode.gain.value = vol;
-    corePlayer.volume = vol; // Sync physical DOM element volume
     
     muteIcon.className = vol === 0 ? 'fa-solid fa-volume-xmark' : 
                          vol < 0.5 ? 'fa-solid fa-volume-low' : 
                          'fa-solid fa-volume-high';
-                         
     isMuted = vol === 0;
     if (!isMuted) previousVolume = vol; 
 });
@@ -206,78 +196,72 @@ muteIcon.addEventListener('click', () => {
         isMuted = false;
         volumeSlider.value = previousVolume > 0 ? previousVolume : 1;
         if (globalGainNode) globalGainNode.gain.value = volumeSlider.value;
-        corePlayer.volume = volumeSlider.value;
         muteIcon.className = volumeSlider.value < 0.5 ? 'fa-solid fa-volume-low' : 'fa-solid fa-volume-high';
     } else {
         isMuted = true;
         previousVolume = volumeSlider.value;
         volumeSlider.value = 0;
         if (globalGainNode) globalGainNode.gain.value = 0;
-        corePlayer.volume = 0;
         muteIcon.className = 'fa-solid fa-volume-xmark';
     }
 });
 
-
 // ==========================================
-// METHOD 1: LIVE RADIO (DOM-Attached)
+// METHOD 1: LIVE RADIO 
 // ==========================================
 playRadioBtn.addEventListener('click', async () => {
     try {
         const originalText = playRadioBtn.innerText;
-        playRadioBtn.innerText = "Connecting to Radio...";
+        playRadioBtn.innerText = "Connecting...";
         playRadioBtn.disabled = true;
 
-        await initAudioContext();
+        // Unlock OS Hardware instantly
+        await unlockAudioContext();
         cleanup();
 
-        // 1. Assign source to the hidden physical DOM element
-        corePlayer.src = radioSelect.value;
+        activeAudioElement = new Audio();
+        activeAudioElement.crossOrigin = "anonymous"; 
+        activeAudioElement.src = radioSelect.value;
         
-        // 2. Connect the physical element to the Web Audio Analyzer (ONLY ONCE per session)
-        if (!isCorePlayerConnected) {
-            const mediaSource = audioContext.createMediaElementSource(corePlayer);
-            mediaSource.connect(analyser);
-            isCorePlayerConnected = true;
-        }
+        activeAudioElement.addEventListener('canplay', async () => {
+            try {
+                sourceNode = audioContext.createMediaElementSource(activeAudioElement);
+                sourceNode.connect(analyser);
 
-        // 3. Play the DOM element to force Android OS to recognize a media session
-        corePlayer.play().then(() => {
-            
-            // 4. Force OS integration (Media Session API) for volume hardware linking
-            if ('mediaSession' in navigator) {
-                navigator.mediaSession.metadata = new MediaMetadata({
-                    title: radioSelect.options[radioSelect.selectedIndex].text,
-                    artist: 'LUMINA Live Radio',
-                    album: 'Internet Stream'
-                });
+                await activeAudioElement.play();
+                
+                container.style.display = 'none';
+                backBtn.style.display = 'flex';
+                volumeControl.style.display = 'flex';
+                draw();
+
+                playRadioBtn.innerText = originalText;
+                playRadioBtn.disabled = false;
+            } catch (playError) {
+                console.error("Playback error:", playError);
+                alert("Playback blocked. Try again.");
+                playRadioBtn.innerText = "Play Radio & Visualize";
+                playRadioBtn.disabled = false;
             }
+        }, { once: true });
 
-            container.style.display = 'none';
-            backBtn.style.display = 'flex';
-            volumeControl.style.display = 'flex';
-            draw();
-
-            playRadioBtn.innerText = originalText;
-            playRadioBtn.disabled = false;
-        }).catch(err => {
-            console.error("Playback error:", err);
-            alert("The browser blocked playback. Please interact with the page first.");
+        activeAudioElement.addEventListener('error', () => {
+            alert("Stream failed to load.");
             playRadioBtn.innerText = "Play Radio & Visualize";
             playRadioBtn.disabled = false;
         });
+
+        activeAudioElement.load();
 
     } catch (err) {
         alert("Failed to initialize the audio engine.");
         playRadioBtn.innerText = "Play Radio & Visualize";
         playRadioBtn.disabled = false;
-        console.error("Radio Error:", err);
     }
 });
 
-
 // ==========================================
-// METHOD 2: LOCAL AUDIO FILE (Buffer Bypass)
+// METHOD 2: LOCAL AUDIO FILE
 // ==========================================
 audioUpload.addEventListener('change', function() {
     selectedFile = this.files[0];
@@ -295,73 +279,59 @@ playSelectedBtn.addEventListener('click', async () => {
         playSelectedBtn.innerText = "Decoding audio...";
         playSelectedBtn.disabled = true;
 
-        await initAudioContext();
+        // Unlock OS Hardware instantly
+        await unlockAudioContext();
         cleanup();
 
-        // Decode directly via Buffer to bypass all Android mobile muting rules for local files
         const arrayBuffer = await selectedFile.arrayBuffer();
         const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
 
-        bufferSource = audioContext.createBufferSource();
-        bufferSource.buffer = audioBuffer;
+        sourceNode = audioContext.createBufferSource();
+        sourceNode.buffer = audioBuffer;
         
-        bufferSource.connect(analyser); 
-        bufferSource.start(0);
-
-        // Force OS integration (Media Session API)
-        if ('mediaSession' in navigator) {
-            navigator.mediaSession.metadata = new MediaMetadata({
-                title: selectedFile.name,
-                artist: 'Local File',
-                album: 'LUMINA Visualizer'
-            });
-        }
+        sourceNode.connect(analyser); 
+        sourceNode.start(0);
 
         container.style.display = 'none';
         backBtn.style.display = 'flex';
         volumeControl.style.display = 'flex';
         draw();
 
-        bufferSource.onended = () => {
+        sourceNode.onended = () => {
             returnToMenu();
         };
 
     } catch (err) {
-        alert("Could not play the file. It might be DRM protected or an unsupported format.");
+        alert("Could not play the file. It might be DRM protected.");
         playSelectedBtn.innerText = "Play File & Visualize";
         playSelectedBtn.disabled = false;
         console.error("File Playback Error:", err);
     }
 });
 
-
 // ==========================================
 // METHOD 3: SCREEN SHARE (Desktop Only)
 // ==========================================
 startBtn.addEventListener('click', async () => {
     try {
-        await initAudioContext();
+        await unlockAudioContext();
         cleanup();
 
         const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
         
-        stream.getVideoTracks()[0].onended = () => {
-            returnToMenu();
-        };
+        stream.getVideoTracks()[0].onended = () => returnToMenu();
 
-        bufferSource = audioContext.createMediaStreamSource(stream);
-        bufferSource.connect(analyser);
+        sourceNode = audioContext.createMediaStreamSource(stream);
+        sourceNode.connect(analyser);
         
         container.style.display = 'none';
         backBtn.style.display = 'flex';
         volumeControl.style.display = 'flex';
         draw();
     } catch (err) {
-        alert("Audio stream not found. Please click 'Connect Audio' again and remember to toggle 'Share tab audio'.");
-        console.error("Screen Share Error:", err);
+        alert("Audio stream not found. Did you check 'Share tab audio'?");
     }
 });
-
 
 // ==========================================
 // 5. MAIN ANIMATION DRAW LOOP

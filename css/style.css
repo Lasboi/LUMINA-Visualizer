@@ -1,4 +1,3 @@
-/* Reset basic styles and use Flexbox for bulletproof centering */
 body, html {
     margin: 0;
     padding: 0;
@@ -12,7 +11,6 @@ body, html {
     align-items: center;       
 }
 
-/* Base style for Top Navigation Elements (Back Button & Volume) */
 .top-nav-btn {
     position: fixed;
     top: 20px;

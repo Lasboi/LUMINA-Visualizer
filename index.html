@@ -13,17 +13,18 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-    <!-- Top Left: Back Button (Hidden by default) -->
+    <!-- Top Left: Back Button -->
     <button id="backBtn" class="top-nav-btn back-btn" style="display: none;">
         <i class="fa-solid fa-arrow-left"></i> Menu
     </button>
 
-    <!-- Top Right: Volume Control (Hidden by default) -->
+    <!-- Top Right: Volume Control -->
     <div id="volumeControl" class="top-nav-btn volume-container" style="display: none;">
         <i id="muteIcon" class="fa-solid fa-volume-high"></i>
         <input type="range" id="volumeSlider" min="0" max="1" step="0.01" value="1">
     </div>
 
+    <!-- Main Menu UI -->
     <div id="container">
         <h1>LUMINA - Immersive Audio</h1>
         
@@ -76,9 +77,6 @@
             </div>
         </div>
     </div>
-    
-    <!-- DOM-Attached Core Player: Forces Mobile OS to recognize media playback -->
-    <audio id="corePlayer" crossorigin="anonymous" style="display: none;"></audio>
     
     <canvas id="visualizer"></canvas>
 
