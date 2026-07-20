@@ -195,6 +195,7 @@ h1 {
 
 .radio-btn { background-color: #f0c040; box-shadow: 0 0 12px #f0c040; color: #000; }
 .file-btn { background-color: #66c0f4; box-shadow: 0 0 12px #66c0f4; }
+.play-file-btn { background-color: #00e5ff; box-shadow: 0 0 12px #00e5ff; color: #000; }
 .desktop-btn { background-color: #ff007f; box-shadow: 0 0 12px #ff007f; }
 
 .hidden-section {
@@ -210,11 +211,6 @@ h1 {
     font-size: 0.85em;
     margin-bottom: 10px;
     word-break: break-all;
-}
-
-/* Specific styling for the native audio element to fit the dark theme */
-audio::-webkit-media-controls-panel {
-    background-color: #b0e0e6;
 }
 
 canvas {
