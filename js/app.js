@@ -5,28 +5,32 @@ const canvas = document.getElementById('visualizer');
 const ctx = canvas.getContext('2d');
 const container = document.getElementById('container');
 
-// Top Navigation Elements
+// Top Navigation & Media Elements
 const backBtn = document.getElementById('backBtn');
 const volumeControl = document.getElementById('volumeControl');
 const volumeSlider = document.getElementById('volumeSlider');
 const muteIcon = document.getElementById('muteIcon');
+const corePlayer = document.getElementById('corePlayer'); // The DOM-attached media anchor
 
-// Method 1: Radio Elements
+// Method 1: Radio
 const radioSelect = document.getElementById('radioSelect');
 const playRadioBtn = document.getElementById('playRadioBtn');
 
-// Method 2: Local File Elements
+// Method 2: Local File
 const audioUpload = document.getElementById('audioUpload');
 const filePlaySection = document.getElementById('filePlaySection');
 const fileNameDisplay = document.getElementById('fileNameDisplay');
 const playSelectedBtn = document.getElementById('playSelectedBtn');
 
-// Method 3: Desktop Screen Share Element
+// Method 3: Desktop Screen Share
 const startBtn = document.getElementById('startBtn');
 
 // Audio Engine Variables
-let audioContext, analyser, source, globalGainNode, activeAudioElement;
+let audioContext, analyser, globalGainNode;
+let bufferSource = null; // Used exclusively for decoding Local Files & Screen Share
+let isCorePlayerConnected = false; // Tracks if the HTML radio player has been bound to the analyser
 let selectedFile = null;
+
 let isMuted = false;
 let previousVolume = 1; 
 
@@ -127,6 +131,8 @@ if (fromIndex === toIndex) toIndex = (toIndex + 1) % shapes.length;
 // ==========================================
 // 4. CORE AUDIO ENGINE & NAVIGATION
 // ==========================================
+
+// Safely boot up Web Audio engine
 async function initAudioContext() {
     if (!audioContext) {
         const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -145,27 +151,26 @@ async function initAudioContext() {
     }
 }
 
+// Complete teardown of all audio layers to prevent ghost-playing
 function cleanup() {
     cancelAnimationFrame(animationId);
     
-    // Stop AudioBufferSourceNode
-    if (source) {
-        try { source.stop(); } catch(e) {}
-        source.disconnect();
-        source = null;
+    // Stop local file BufferSource
+    if (bufferSource) {
+        try { bufferSource.stop(); } catch(e) {}
+        bufferSource.disconnect();
+        bufferSource = null;
     }
     
-    // Stop hidden Audio Elements
-    if (activeAudioElement) {
-        activeAudioElement.pause();
-        activeAudioElement.removeAttribute('src'); 
-        activeAudioElement.load();
-        activeAudioElement = null;
-    }
+    // Stop DOM-anchored Radio Player
+    corePlayer.pause();
+    corePlayer.removeAttribute('src'); 
+    corePlayer.load();
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 }
 
+// Hide visualizer, reset to main menu
 function returnToMenu() {
     cleanup();
     container.style.display = 'block';
@@ -180,11 +185,13 @@ function returnToMenu() {
 }
 backBtn.addEventListener('click', returnToMenu);
 
+
 // --- VOLUME SLIDER LOGIC ---
 volumeSlider.addEventListener('input', (e) => {
     const vol = parseFloat(e.target.value);
     
     if (globalGainNode) globalGainNode.gain.value = vol;
+    corePlayer.volume = vol; // Sync physical DOM element volume
     
     muteIcon.className = vol === 0 ? 'fa-solid fa-volume-xmark' : 
                          vol < 0.5 ? 'fa-solid fa-volume-low' : 
@@ -199,19 +206,21 @@ muteIcon.addEventListener('click', () => {
         isMuted = false;
         volumeSlider.value = previousVolume > 0 ? previousVolume : 1;
         if (globalGainNode) globalGainNode.gain.value = volumeSlider.value;
+        corePlayer.volume = volumeSlider.value;
         muteIcon.className = volumeSlider.value < 0.5 ? 'fa-solid fa-volume-low' : 'fa-solid fa-volume-high';
     } else {
         isMuted = true;
         previousVolume = volumeSlider.value;
         volumeSlider.value = 0;
         if (globalGainNode) globalGainNode.gain.value = 0;
+        corePlayer.volume = 0;
         muteIcon.className = 'fa-solid fa-volume-xmark';
     }
 });
 
 
 // ==========================================
-// METHOD 1: LIVE RADIO (Direct Audio Fetch)
+// METHOD 1: LIVE RADIO (DOM-Attached)
 // ==========================================
 playRadioBtn.addEventListener('click', async () => {
     try {
@@ -222,42 +231,41 @@ playRadioBtn.addEventListener('click', async () => {
         await initAudioContext();
         cleanup();
 
-        const targetStreamUrl = radioSelect.value;
-
-        activeAudioElement = new Audio();
-        activeAudioElement.crossOrigin = "anonymous"; 
-        activeAudioElement.src = targetStreamUrl;
+        // 1. Assign source to the hidden physical DOM element
+        corePlayer.src = radioSelect.value;
         
-        activeAudioElement.addEventListener('canplay', async () => {
-            try {
-                source = audioContext.createMediaElementSource(activeAudioElement);
-                source.connect(analyser);
+        // 2. Connect the physical element to the Web Audio Analyzer (ONLY ONCE per session)
+        if (!isCorePlayerConnected) {
+            const mediaSource = audioContext.createMediaElementSource(corePlayer);
+            mediaSource.connect(analyser);
+            isCorePlayerConnected = true;
+        }
 
-                await activeAudioElement.play();
-                
-                container.style.display = 'none';
-                backBtn.style.display = 'flex';
-                volumeControl.style.display = 'flex';
-                draw();
-
-                playRadioBtn.innerText = originalText;
-                playRadioBtn.disabled = false;
-            } catch (playError) {
-                console.error("Playback error:", playError);
-                alert("The browser blocked playback. Please interact with the page first.");
-                playRadioBtn.innerText = "Play Radio & Visualize";
-                playRadioBtn.disabled = false;
+        // 3. Play the DOM element to force Android OS to recognize a media session
+        corePlayer.play().then(() => {
+            
+            // 4. Force OS integration (Media Session API) for volume hardware linking
+            if ('mediaSession' in navigator) {
+                navigator.mediaSession.metadata = new MediaMetadata({
+                    title: radioSelect.options[radioSelect.selectedIndex].text,
+                    artist: 'LUMINA Live Radio',
+                    album: 'Internet Stream'
+                });
             }
-        }, { once: true });
 
-        activeAudioElement.addEventListener('error', (e) => {
-            console.error("Audio Element Error:", e);
-            alert("Stream failed to load. The radio station server blocked access (CORS) or the stream is currently offline.");
+            container.style.display = 'none';
+            backBtn.style.display = 'flex';
+            volumeControl.style.display = 'flex';
+            draw();
+
+            playRadioBtn.innerText = originalText;
+            playRadioBtn.disabled = false;
+        }).catch(err => {
+            console.error("Playback error:", err);
+            alert("The browser blocked playback. Please interact with the page first.");
             playRadioBtn.innerText = "Play Radio & Visualize";
             playRadioBtn.disabled = false;
         });
-
-        activeAudioElement.load();
 
     } catch (err) {
         alert("Failed to initialize the audio engine.");
@@ -269,7 +277,7 @@ playRadioBtn.addEventListener('click', async () => {
 
 
 // ==========================================
-// METHOD 2: LOCAL FILE (Direct Buffer Decode)
+// METHOD 2: LOCAL AUDIO FILE (Buffer Bypass)
 // ==========================================
 audioUpload.addEventListener('change', function() {
     selectedFile = this.files[0];
@@ -290,22 +298,31 @@ playSelectedBtn.addEventListener('click', async () => {
         await initAudioContext();
         cleanup();
 
-        // Load as ArrayBuffer and decode directly. This bypasses mobile MediaElement muting.
+        // Decode directly via Buffer to bypass all Android mobile muting rules for local files
         const arrayBuffer = await selectedFile.arrayBuffer();
         const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
 
-        source = audioContext.createBufferSource();
-        source.buffer = audioBuffer;
+        bufferSource = audioContext.createBufferSource();
+        bufferSource.buffer = audioBuffer;
         
-        source.connect(analyser); 
-        source.start(0);
+        bufferSource.connect(analyser); 
+        bufferSource.start(0);
+
+        // Force OS integration (Media Session API)
+        if ('mediaSession' in navigator) {
+            navigator.mediaSession.metadata = new MediaMetadata({
+                title: selectedFile.name,
+                artist: 'Local File',
+                album: 'LUMINA Visualizer'
+            });
+        }
 
         container.style.display = 'none';
         backBtn.style.display = 'flex';
         volumeControl.style.display = 'flex';
         draw();
 
-        source.onended = () => {
+        bufferSource.onended = () => {
             returnToMenu();
         };
 
@@ -332,8 +349,8 @@ startBtn.addEventListener('click', async () => {
             returnToMenu();
         };
 
-        source = audioContext.createMediaStreamSource(stream);
-        source.connect(analyser);
+        bufferSource = audioContext.createMediaStreamSource(stream);
+        bufferSource.connect(analyser);
         
         container.style.display = 'none';
         backBtn.style.display = 'flex';

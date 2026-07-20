@@ -5,14 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="index, follow">
     
-    <!-- Primary SEO Metadata -->
     <title>LUMINA - Immersive 3D Audio Visualizer Online</title>
     <meta name="description" content="Experience music like never before with LUMINA. A powerful, interactive 3D audio visualizer running directly in your browser.">
     <meta name="author" content="LasBoi">
 
-    <!-- Link to external CSS file for styling -->
     <link rel="stylesheet" href="css/style.css">
-    <!-- Link to Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
@@ -27,7 +24,6 @@
         <input type="range" id="volumeSlider" min="0" max="1" step="0.01" value="1">
     </div>
 
-    <!-- Main container for the landing page UI -->
     <div id="container">
         <h1>LUMINA - Immersive Audio</h1>
         
@@ -64,7 +60,6 @@
                     <label for="audioUpload" class="action-btn file-btn">Select Audio File</label>
                 </div>
 
-                <!-- Hidden section holding the play button for local files -->
                 <div id="filePlaySection" class="hidden-section">
                     <p id="fileNameDisplay" class="file-name"></p>
                     <button id="playSelectedBtn" class="action-btn play-file-btn">Play File & Visualize</button>
@@ -81,6 +76,9 @@
             </div>
         </div>
     </div>
+    
+    <!-- DOM-Attached Core Player: Forces Mobile OS to recognize media playback -->
+    <audio id="corePlayer" crossorigin="anonymous" style="display: none;"></audio>
     
     <canvas id="visualizer"></canvas>
 
