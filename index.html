@@ -7,28 +7,12 @@
     
     <!-- Primary SEO Metadata -->
     <title>LUMINA - Immersive 3D Audio Visualizer Online</title>
-    <meta name="description" content="Experience music like never before with LUMINA. A powerful, interactive 3D audio visualizer running directly in your browser using screen share or local audio files.">
-    <meta name="keywords" content="music visualizer, 3d audio visualizer, interactive visualizer, browser audio visualizer, local file visualizer, sound spectrum analyzer, VJ software online">
+    <meta name="description" content="Experience music like never before with LUMINA. A powerful, interactive 3D audio visualizer running directly in your browser.">
     <meta name="author" content="LasBoi">
-
-    <!-- Open Graph / Facebook / Discord Metadata -->
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="https://yourdomain.com/">
-    <meta property="og:title" content="LUMINA - Immersive 3D Audio Visualizer Online">
-    <meta property="og:description" content="Turn your music into stunning, real-time 3D wireframe visuals. Supports browser tab audio mirroring and local audio file playback.">
-    <!-- PLACEHOLDER FOR META IMAGE: Recommended size 1200x630 pixels -->
-    <meta property="og:image" content="https://yourdomain.com/assets/og-image.jpg">
-
-    <!-- Twitter / X Metadata -->
-    <meta property="twitter:card" content="summary_large_image">
-    <meta property="twitter:url" content="https://yourdomain.com/">
-    <meta property="twitter:title" content="LUMINA - Immersive 3D Audio Visualizer Online">
-    <meta property="twitter:description" content="Turn your music into stunning, real-time 3D wireframe visuals. Supports browser tab audio mirroring and local audio file playback.">
-    <meta property="twitter:image" content="https://yourdomain.com/assets/og-image.jpg">
 
     <!-- Link to external CSS file for styling -->
     <link rel="stylesheet" href="css/style.css">
-    <!-- Link to Font Awesome for the heart icon in the footer -->
+    <!-- Link to Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
@@ -36,38 +20,50 @@
     <div id="container">
         <h1>LUMINA - Immersive Audio</h1>
         
-        <!-- UNIVERSAL INSTRUCTIONS -->
         <div class="instructions">
-            <h3>How to connect your music:</h3>
-            
-            <p style="margin-top: 5px; margin-bottom: 10px; color: #b0b8c0; text-align: center;">
-                Choose a method below to start the visualizer.
-            </p>
+            <p class="subtitle">Choose your preferred audio source to start the visualizer.</p>
 
-            <!-- METHOD 1: LOCAL FILE (Works perfectly on Mobile & Desktop) -->
-            <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; margin-bottom: 15px;">
-                <strong style="color: #66c0f4; font-size: 1.1em;"><i class="fa-solid fa-music"></i> Method 1: Local File (Recommended for Mobile)</strong><br>
-                <span style="font-size: 0.9em; color: #ddd;">Select any MP3/WAV file from your device. No internet required, no lag, perfect bass response.</span>
+            <!-- METHOD 1: LIVE RADIO (Universal) -->
+            <div class="method-card">
+                <strong class="method-title"><i class="fa-solid fa-radio"></i> Method 1: Live Radio</strong>
+                <p class="method-desc">Stream live internet radio directly. Guaranteed to work on mobile and desktop.</p>
                 
-                <!-- Button to open the file picker -->
-                <div style="margin-top: 15px; text-align: center;">
-                    <input type="file" id="audioUpload" accept="audio/*" style="display: none;">
-                    <label for="audioUpload" class="action-btn" style="background-color: #66c0f4; box-shadow: 0 0 15px #66c0f4;">Select Audio File</label>
-                </div>
-
-                <!-- Hidden section that appears after a file is selected to initiate playback securely -->
-                <div id="filePlaySection" style="display: none; margin-top: 15px; text-align: center; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px;">
-                    <p id="fileNameDisplay" style="color: #fff; font-size: 0.9em; margin-bottom: 15px; word-break: break-all;"></p>
-                    <button id="playSelectedBtn" class="action-btn" style="background-color: #00e5ff; box-shadow: 0 0 15px #00e5ff;">Play & Visualize</button>
+                <select id="radioSelect" class="dropdown-select">
+                    <!-- TechnoBase.fm stream via a reliable MP3 endpoint -->
+                    <option value="https://stream.technobase.fm/128-mp3">TechnoBase.fm (Hard Dance / Trance)</option>
+                    <!-- Fallback reliable streams with native open CORS -->
+                    <option value="https://ice1.somafm.com/groovesalad-128-mp3">SomaFM: Groove Salad (Chill/Downtempo)</option>
+                    <option value="https://ice1.somafm.com/defcon-128-mp3">SomaFM: DEF CON Radio (Electronic/Hacking)</option>
+                </select>
+                
+                <div class="btn-wrapper">
+                    <button id="playRadioBtn" class="action-btn radio-btn">Play Radio & Visualize</button>
                 </div>
             </div>
 
-            <!-- METHOD 2: SCREEN SHARE (Desktop Only) -->
-            <div class="desktop-only" style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px;">
-                <strong style="color: #ff007f; font-size: 1.1em;"><i class="fa-solid fa-desktop"></i> Method 2: Screen Share (Desktop Only)</strong><br>
-                <span style="font-size: 0.9em; color: #ddd;">Play Spotify/YouTube in another tab. Click below and share that tab (Remember to check "Share Audio").</span>
-                <div style="margin-top: 15px; text-align: center;">
-                    <button id="startBtn" class="action-btn">Connect Tab Audio</button>
+            <!-- METHOD 2: LOCAL AUDIO FILE (Universal) -->
+            <div class="method-card">
+                <strong class="method-title"><i class="fa-solid fa-file-audio"></i> Method 2: Local Audio File</strong>
+                <p class="method-desc">Select any music file (MP3, WAV, FLAC, OGG, etc.) from your device.</p>
+                
+                <div class="btn-wrapper">
+                    <input type="file" id="audioUpload" accept="audio/*" style="display: none;">
+                    <label for="audioUpload" class="action-btn file-btn">Select Audio File</label>
+                </div>
+
+                <!-- Hidden until a file is selected -->
+                <div id="filePlaySection" class="hidden-section">
+                    <p id="fileNameDisplay" class="file-name"></p>
+                    <button id="playSelectedBtn" class="action-btn play-file-btn">Play File & Visualize</button>
+                </div>
+            </div>
+
+            <!-- METHOD 3: SCREEN SHARE (Desktop Only) -->
+            <div class="method-card desktop-only">
+                <strong class="method-title"><i class="fa-solid fa-desktop"></i> Method 3: Screen Share</strong>
+                <p class="method-desc">Play Spotify/YouTube in another tab. Share that tab to visualize it.</p>
+                <div class="btn-wrapper">
+                    <button id="startBtn" class="action-btn desktop-btn">Connect Tab Audio</button>
                 </div>
             </div>
         </div>

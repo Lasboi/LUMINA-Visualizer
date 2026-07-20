@@ -1,23 +1,33 @@
-// DOM Element selection
+// ==========================================
+// 1. DOM ELEMENTS & VARIABLES
+// ==========================================
 const canvas = document.getElementById('visualizer');
 const ctx = canvas.getContext('2d');
-const startBtn = document.getElementById('startBtn'); // Desktop sharing button
-const audioUpload = document.getElementById('audioUpload'); // Mobile/Desktop file upload
 const container = document.getElementById('container');
 
-// Elements for the two-step local file playback
+// Method 1: Radio Elements
+const radioSelect = document.getElementById('radioSelect');
+const playRadioBtn = document.getElementById('playRadioBtn');
+
+// Method 2: Local File Elements
+const audioUpload = document.getElementById('audioUpload');
 const filePlaySection = document.getElementById('filePlaySection');
 const fileNameDisplay = document.getElementById('fileNameDisplay');
 const playSelectedBtn = document.getElementById('playSelectedBtn');
 let selectedFile = null;
 
-// Audio and animation control variables
-let audioContext, analyser, source;
+// Method 3: Desktop Screen Share Element
+const startBtn = document.getElementById('startBtn');
+
+// Audio Engine Variables
+let audioContext, analyser, source, audioElement;
 let time = 0;             
 let figureRotation = 0;   
-let animationId; // Stores the animation frame ID to stop loops gracefully  
+let animationId; 
 
-// Adjust canvas size to fill the browser window
+// ==========================================
+// 2. CANVAS & 3D PROJECTION SETUP
+// ==========================================
 function resizeCanvas() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
@@ -25,14 +35,12 @@ function resizeCanvas() {
 window.addEventListener('resize', resizeCanvas);
 resizeCanvas(); 
 
-// Camera settings for 3D projection mathematical formulas
 const focalLength = 900;
 const camZ = -1400; 
 
-// Project 3D coordinates (x,y,z) to 2D screen coordinates
 function project(x, y, z) {
     const rz = z - camZ;
-    if (rz <= 0) return null; // Prevents division by zero if point is behind camera
+    if (rz <= 0) return null; 
     const scale = focalLength / rz;
     return {
         x: (canvas.width / 2) + (x * scale),
@@ -41,16 +49,15 @@ function project(x, y, z) {
     };
 }
 
-// --- GENERATING 43 UNIQUE 3D SHAPES ---
-// We create each shape by calculating and plotting 2000 points in 3D space
+// ==========================================
+// 3. GENERATE 43 SHAPES (MATH LOGIC)
+// ==========================================
 const TOTAL_POINTS = 2000;
 const BASE_RADIUS = 350;
 const shapes = [];
-
-// Smoothing mathematical function for seamless morphing transitions between shapes
 const easeInOutCubic = t => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 
-// 1. SPHERE
+// Shape 1: Sphere
 let sphere = [];
 for (let i = 0; i < TOTAL_POINTS; i++) {
     let t = i / (TOTAL_POINTS - 1);
@@ -60,7 +67,7 @@ for (let i = 0; i < TOTAL_POINTS; i++) {
 }
 shapes.push(sphere);
 
-// 2. TORUS (Portal ring)
+// Shape 2: Torus
 let torus = [];
 for (let i = 0; i < TOTAL_POINTS; i++) {
     let t = i / (TOTAL_POINTS - 1);
@@ -71,7 +78,7 @@ for (let i = 0; i < TOTAL_POINTS; i++) {
 }
 shapes.push(torus);
 
-// 3. HOURGLASS
+// Shape 3: Hourglass
 let hourglass = [];
 for (let i = 0; i < TOTAL_POINTS; i++) {
     let t = i / (TOTAL_POINTS - 1);
@@ -82,7 +89,7 @@ for (let i = 0; i < TOTAL_POINTS; i++) {
 }
 shapes.push(hourglass);
 
-// 4. DNA SPIRAL (Double helix structure)
+// Shape 4: DNA Spiral
 let dna = [];
 for (let i = 0; i < TOTAL_POINTS; i++) {
     let t = i / (TOTAL_POINTS - 1);
@@ -93,7 +100,7 @@ for (let i = 0; i < TOTAL_POINTS; i++) {
 }
 shapes.push(dna);
 
-// 5. INFINITY KNOT (Endless loop)
+// Shape 5: Infinity Knot
 let infinity = [];
 for (let i = 0; i < TOTAL_POINTS; i++) {
     let t = (i / (TOTAL_POINTS - 1)) * Math.PI * 2;
@@ -101,7 +108,7 @@ for (let i = 0; i < TOTAL_POINTS; i++) {
 }
 shapes.push(infinity);
 
-// 6. LOTUS FLOWER (Blooming petals)
+// Shape 6: Lotus Flower
 let lotus = [];
 for (let i = 0; i < TOTAL_POINTS; i++) {
     let t = i / (TOTAL_POINTS - 1);
@@ -112,7 +119,7 @@ for (let i = 0; i < TOTAL_POINTS; i++) {
 }
 shapes.push(lotus);
 
-// 7. TORUS KNOT (Advanced 3D intricate knot)
+// Shape 7: Torus Knot
 let torusKnot = [];
 for (let i = 0; i < TOTAL_POINTS; i++) {
     let t = (i / (TOTAL_POINTS - 1)) * Math.PI * 2;
@@ -121,18 +128,18 @@ for (let i = 0; i < TOTAL_POINTS; i++) {
 }
 shapes.push(torusKnot);
 
-// 8. HEART (Pulsating heart shape)
+// Shape 8: Heart
 let heart = [];
 for (let i = 0; i < TOTAL_POINTS; i++) {
     let t = (i / (TOTAL_POINTS - 1)) * Math.PI * 2;
     let x = 0.05 * 16 * Math.pow(Math.sin(t), 3);
     let y = -0.05 * (13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t));
-    let z = Math.sin(t * 15) * 0.15; // Adds depth/thickness to the 2D formula
+    let z = Math.sin(t * 15) * 0.15; 
     heart.push({ x: x, y: y, z: z });
 }
 shapes.push(heart);
 
-// 9. MÖBIUS STRIP (Non-orientable mathematical surface)
+// Shape 9: Möbius Strip
 let mobius = [];
 for (let i = 0; i < TOTAL_POINTS; i++) {
     let u = ((i % 100) / 100) * Math.PI * 2;
@@ -145,29 +152,29 @@ for (let i = 0; i < TOTAL_POINTS; i++) {
 }
 shapes.push(mobius);
 
-// 10. CRYSTAL / SEA URCHIN (Spiky defensive shape)
+// Shape 10: Crystal
 let crystal = [];
 for (let i = 0; i < TOTAL_POINTS; i++) {
     let t = i / (TOTAL_POINTS - 1);
     let phi = Math.acos(1 - 2 * t);
     let theta = Math.PI * (1 + Math.sqrt(5)) * i;
-    let r = 0.6 + 0.4 * Math.sin(phi * 20) * Math.sin(theta * 20); // Creates spikes
+    let r = 0.6 + 0.4 * Math.sin(phi * 20) * Math.sin(theta * 20); 
     crystal.push({ x: r * Math.sin(phi) * Math.cos(theta), y: r * Math.sin(phi) * Math.sin(theta), z: r * Math.cos(phi) });
 }
 shapes.push(crystal);
 
-// 11. VORTEX / GALAXY (Swirling funnel)
+// Shape 11: Vortex
 let vortex = [];
 for (let i = 0; i < TOTAL_POINTS; i++) {
     let t = i / (TOTAL_POINTS - 1);
     let r = t;
     let theta = t * Math.PI * 30;
-    let y = Math.sin(i * 1234.5) * 0.15 * t; // Fixed pseudo-random vertical scattering
+    let y = Math.sin(i * 1234.5) * 0.15 * t; 
     vortex.push({ x: r * Math.cos(theta), y: y, z: r * Math.sin(theta) });
 }
 shapes.push(vortex);
 
-// 12. CYLINDER / TOWER
+// Shape 12: Cylinder
 let cylinder = [];
 let CYL_RINGS = 50;
 let PTS_PER_RING = TOTAL_POINTS / CYL_RINGS;
@@ -178,7 +185,7 @@ for (let i = 0; i < TOTAL_POINTS; i++) {
 }
 shapes.push(cylinder);
 
-// 13. THE WAVE (Matrix Grid landscape)
+// Shape 13: Matrix Wave
 let wave = [];
 for (let i = 0; i < TOTAL_POINTS; i++) {
     let u = ((i % 45) / 45) * 2 - 1;
@@ -188,7 +195,7 @@ for (let i = 0; i < TOTAL_POINTS; i++) {
 }
 shapes.push(wave);
 
-// 14. SPINNING TOP (Classic toy shape)
+// Shape 14: Spinning Top
 let spinningTop = [];
 for (let i = 0; i < TOTAL_POINTS; i++) {
     let t = i / (TOTAL_POINTS - 1);
@@ -210,268 +217,154 @@ for (let i = 0; i < TOTAL_POINTS; i++) {
 }
 shapes.push(spinningTop);
 
-// 15. THE TRUE ROSE (V3 - True 3D Flower with Petals and Stem)
+// Shape 15: True Rose
 let trueRose = [];
 for (let i = 0; i < TOTAL_POINTS; i++) {
     let t = i / (TOTAL_POINTS - 1);
     let x = 0, y = 0, z = 0;
 
     if (t < 0.10) { 
-        // 1. Thick Stem (A very dense spiral forming a solid line)
         let u = t / 0.10;
         let theta = u * Math.PI * 30;
         let r = 0.04;
-        x = r * Math.cos(theta);
-        z = r * Math.sin(theta);
-        y = -1.5 + u * 1.0; 
+        x = r * Math.cos(theta); z = r * Math.sin(theta); y = -1.5 + u * 1.0; 
     } else if (t < 0.16) { 
-        // 2. Left Leaf (Draws a 3D loop extending from the stem)
         let u = (t - 0.10) / 0.06;
-        x = -0.8 * Math.sin(u * Math.PI);
-        y = -0.8 + 0.5 * u + 0.2 * Math.sin(u * Math.PI); 
-        z = 0.25 * Math.sin(u * Math.PI * 2); // Opens up in depth
+        x = -0.8 * Math.sin(u * Math.PI); y = -0.8 + 0.5 * u + 0.2 * Math.sin(u * Math.PI); z = 0.25 * Math.sin(u * Math.PI * 2); 
     } else if (t < 0.22) { 
-        // 3. Right Leaf
         let u = (t - 0.16) / 0.06;
-        x = 0.8 * Math.sin(u * Math.PI);
-        y = -0.5 + 0.5 * u + 0.2 * Math.sin(u * Math.PI); 
-        z = -0.25 * Math.sin(u * Math.PI * 2); 
+        x = 0.8 * Math.sin(u * Math.PI); y = -0.5 + 0.5 * u + 0.2 * Math.sin(u * Math.PI); z = -0.25 * Math.sin(u * Math.PI * 2); 
     } else if (t < 0.25) { 
-        // 4. Stem continuation up to the flower head
         let u = (t - 0.22) / 0.03;
-        let theta = u * Math.PI * 10;
-        let r = 0.04;
-        x = r * Math.cos(theta);
-        z = r * Math.sin(theta);
-        y = -0.3 + u * 0.2; 
+        let theta = u * Math.PI * 10; let r = 0.04;
+        x = r * Math.cos(theta); z = r * Math.sin(theta); y = -0.3 + u * 0.2; 
     } else { 
-        // 5. Flower Head
         let u = (t - 0.25) / 0.75; 
         let turns = 14; 
         let theta = u * Math.PI * 2 * turns; 
-        
-        // Radius tapers smoothly towards the center
         let baseR = 1.35 * Math.pow(1 - u, 0.7); 
-        
-        // Creates 4 petals per revolution (soft curves outward, sharp inward)
         let petalWave = Math.abs(Math.sin(theta * 2)); 
-        
         let r = baseR * (0.75 + 0.25 * petalWave); 
-        
-        // Height (Y) forms the base of a bowl
-        let bowl = Math.pow(u, 0.6); 
-        y = -0.1 + bowl * 1.2; 
-        
-        // Tilts the edges of the petals slightly upward
-        y += 0.15 * petalWave * (1 - u);
-        
-        x = r * Math.cos(theta);
-        z = r * Math.sin(theta);
+        let bowl = Math.pow(u, 0.6); y = -0.1 + bowl * 1.2; y += 0.15 * petalWave * (1 - u);
+        x = r * Math.cos(theta); z = r * Math.sin(theta);
     }
     trueRose.push({ x: x, y: y, z: z });
 }
 shapes.push(trueRose);
 
-// 16. CHRISTMAS TREE (Cartoon 3D style with 3 tiers and a star)
+// Shape 16: Christmas Tree
 let christmasTree = [];
 for (let i = 0; i < TOTAL_POINTS; i++) {
     let t = i / (TOTAL_POINTS - 1);
     let x = 0, y = 0, z = 0;
 
     if (t < 0.08) {
-        // 1. Tree Trunk (Dense spiral)
-        let u = t / 0.08;
-        let theta = u * Math.PI * 30; 
-        let r = 0.15;
-        x = r * Math.cos(theta);
-        z = r * Math.sin(theta);
-        y = -1.3 + u * 0.5; // Grows from bottom up
+        let u = t / 0.08; let theta = u * Math.PI * 30; let r = 0.15;
+        x = r * Math.cos(theta); z = r * Math.sin(theta); y = -1.3 + u * 0.5; 
     } else if (t < 0.92) {
-        // 2. The 3 tiers of branches
         let u = (t - 0.08) / 0.84; 
-        let tier = Math.floor(u * 3); // Splits segment into 0, 1, and 2
-        if (tier > 2) tier = 2; // Safety clamp
-        let localU = (u * 3) - tier; // Value from 0 to 1 within the specific tier
-        
-        // Heights for each of the 3 tiers (creates a nice overlap)
-        let baseY = [-0.8, -0.25, 0.35][tier];
-        let endY = [-0.05, 0.5, 1.0][tier];
+        let tier = Math.floor(u * 3); 
+        if (tier > 2) tier = 2; 
+        let localU = (u * 3) - tier; 
+        let baseY = [-0.8, -0.25, 0.35][tier]; let endY = [-0.05, 0.5, 1.0][tier];
         y = baseY + localU * (endY - baseY);
-        
-        // Start and end radius for each tier
-        let maxR = [1.3, 0.95, 0.6][tier];
-        let endR = [0.2, 0.1, 0.0][tier];
+        let maxR = [1.3, 0.95, 0.6][tier]; let endR = [0.2, 0.1, 0.0][tier];
         let r = maxR - localU * (maxR - endR);
-        
-        // The magical "cartoon curve" at the bottom of each tier
-        if (localU < 0.15) {
-            let curve = Math.sin((localU / 0.15) * Math.PI); 
-            y -= curve * 0.15; // Pulls branch downwards
-            r += curve * 0.10; // Pushes branch slightly outwards
-        }
-        
-        let theta = u * Math.PI * 150; // Gives branches lots of dense lines
-        
-        // Add a wave on the surface (simulates glowing ornaments)
-        let ornaments = Math.sin(theta * 4) * 0.02;
-        r += ornaments;
-
-        x = r * Math.cos(theta);
-        z = r * Math.sin(theta);
+        if (localU < 0.15) { let curve = Math.sin((localU / 0.15) * Math.PI); y -= curve * 0.15; r += curve * 0.10; }
+        let theta = u * Math.PI * 150; 
+        let ornaments = Math.sin(theta * 4) * 0.02; r += ornaments;
+        x = r * Math.cos(theta); z = r * Math.sin(theta);
     } else {
-        // 3. The Star on top
-        let u = (t - 0.92) / 0.08;
-        let theta = u * Math.PI * 2 * 10; // Drawn over 10 revolutions to make it solid
-        
-        // Math for a sharp 5-pointed star
+        let u = (t - 0.92) / 0.08; let theta = u * Math.PI * 2 * 10; 
         let starR = 0.05 + 0.30 * Math.pow(Math.cos(2.5 * theta), 2); 
-
-        x = starR * Math.cos(theta);
-        y = 1.25 + starR * Math.sin(theta); // Elevated vertically above the tree
-        z = Math.sin(theta * 3) * 0.05; // Gives the star some 3D thickness
+        x = starR * Math.cos(theta); y = 1.25 + starR * Math.sin(theta); z = Math.sin(theta * 3) * 0.05; 
     }
     christmasTree.push({ x: x, y: y, z: z });
 }
 shapes.push(christmasTree);
 
-// 17. SOLAR FLARE (Massive, scratched sphere)
+// Shape 17: Solar Flare
 let solarFlare = [];
 for (let i = 0; i < TOTAL_POINTS; i++) {
     let t = i / (TOTAL_POINTS - 1);
-    let theta = t * Math.PI * 2 * 150; // Extremely dense spiral (150 revolutions)
-    
-    // Generates the "scratched" texture on the surface using fast sine waves
+    let theta = t * Math.PI * 2 * 150; 
     let scratchNoise = Math.sin(theta * 3.14) * 0.12 * Math.sin(t * Math.PI * 80);
-    
     let phi = Math.acos(1 - 2 * t);
-    let r = 0.9 + scratchNoise; // Near full size + scratches
-    
-    solarFlare.push({
-        x: r * Math.sin(phi) * Math.cos(theta),
-        y: r * Math.sin(phi) * Math.sin(theta),
-        z: r * Math.cos(phi)
-    });
+    let r = 0.9 + scratchNoise; 
+    solarFlare.push({ x: r * Math.sin(phi) * Math.cos(theta), y: r * Math.sin(phi) * Math.sin(theta), z: r * Math.cos(phi) });
 }
 shapes.push(solarFlare);
 
-// 18. QUANTUM CORE (Optical illusion with internal waves / Moiré pattern)
+// Shape 18: Quantum Core
 let quantumCore = [];
 for (let i = 0; i < TOTAL_POINTS; i++) {
     let t = i / (TOTAL_POINTS - 1);
-    let theta = t * Math.PI * 2 * 90;
-    let phi = t * Math.PI * 2 * 6; // Forms overlapping rings
-    
-    // Creates the interference pattern (Moiré) in the core of the figure
+    let theta = t * Math.PI * 2 * 90; let phi = t * Math.PI * 2 * 6; 
     let r = 0.65 + 0.35 * Math.sin(theta * 8) * Math.cos(phi * 5);
-    
-    quantumCore.push({
-        x: r * Math.cos(theta) * Math.sin(phi),
-        y: r * Math.sin(theta) * Math.sin(phi),
-        z: r * Math.cos(phi)
-    });
+    quantumCore.push({ x: r * Math.cos(theta) * Math.sin(phi), y: r * Math.sin(theta) * Math.sin(phi), z: r * Math.cos(phi) });
 }
 shapes.push(quantumCore);
 
-// 19. PULSATING IRIS (Dense center radiating outwards)
+// Shape 19: Pulsating Iris
 let iris = [];
 for (let i = 0; i < TOTAL_POINTS; i++) {
     let t = i / (TOTAL_POINTS - 1);
-    let theta = t * Math.PI * 2 * 60; // Angle of the rays
-    
-    // Makes the thread zigzag violently in and out from the center
+    let theta = t * Math.PI * 2 * 60; 
     let r = 0.95 * Math.abs(Math.sin(t * Math.PI * 250));
-    
-    // Curves the figure slightly so it's not just a flat 2D disc
     let z = 0.15 * Math.sin(t * Math.PI * 40);
-    
-    iris.push({
-        x: r * Math.cos(theta),
-        y: r * Math.sin(theta),
-        z: z
-    });
+    iris.push({ x: r * Math.cos(theta), y: r * Math.sin(theta), z: z });
 }
 shapes.push(iris);
 
-// 20. EVENT HORIZON (Black Hole funnel)
+// Shape 20: Event Horizon
 let blackHole = [];
 for (let i = 0; i < TOTAL_POINTS; i++) {
     let t = i / (TOTAL_POINTS - 1);
-    let theta = t * Math.PI * 2 * 120; // Massive rotation
-    
-    // The funnel becomes extremely wide at the top
+    let theta = t * Math.PI * 2 * 120; 
     let r = 1.6 * Math.pow(t, 1.2); 
-    
-    // Dives asymptotically towards infinity in the center
     let y = -0.8 / (r + 0.15) + 0.6; 
-    
-    // A slight "wobble" on the event horizon
     let wobble = Math.sin(theta * 3) * 0.05;
-    
-    blackHole.push({ 
-        x: (r + wobble) * Math.cos(theta), 
-        y: y, 
-        z: (r + wobble) * Math.sin(theta) 
-    });
+    blackHole.push({ x: (r + wobble) * Math.cos(theta), y: y, z: (r + wobble) * Math.sin(theta) });
 }
 shapes.push(blackHole);
 
-// 21. HYPER-TORUS (4D Folding illusion shape)
+// Shape 21: Hyper-Torus
 let hyperTorus = [];
 for (let i = 0; i < TOTAL_POINTS; i++) {
     let t = i / (TOTAL_POINTS - 1);
-    let u = t * Math.PI * 2 * 45; // Inner loops
-    let v = t * Math.PI * 2;      // Outer rotation
-    
-    // The figure folds into itself like a Möbius strip in 3D
+    let u = t * Math.PI * 2 * 45; let v = t * Math.PI * 2;      
     let r = 0.8 + 0.4 * Math.cos(u);
-    let x = r * Math.cos(v);
-    let y = r * Math.sin(v);
-    
-    // The Z-axis shifts twice to create the fold
+    let x = r * Math.cos(v); let y = r * Math.sin(v);
     let z = 0.5 * Math.sin(u) + 0.3 * Math.sin(v * 2); 
-    
     hyperTorus.push({ x, y, z });
 }
 shapes.push(hyperTorus);
 
-// 22. CRYPTOGRAPHIC GLITCH (Corrupted digital sphere)
+// Shape 22: Cryptographic Glitch
 let glitch = [];
 for (let i = 0; i < TOTAL_POINTS; i++) {
     let t = i / (TOTAL_POINTS - 1);
     let phi = Math.acos(1 - 2 * t);
     let theta = Math.PI * (1 + Math.sqrt(5)) * i;
-
-    // Pseudo-random algorithm that lets certain points "glitch" violently outwards
     let isGlitch = (Math.sin(i * 137.5) > 0.85) ? 1.6 : 1.0;
     let r = 0.7 * isGlitch;
-
-    glitch.push({
-        x: r * Math.sin(phi) * Math.cos(theta),
-        y: r * Math.sin(phi) * Math.sin(theta),
-        z: r * Math.cos(phi)
-    });
+    glitch.push({ x: r * Math.sin(phi) * Math.cos(theta), y: r * Math.sin(phi) * Math.sin(theta), z: r * Math.cos(phi) });
 }
 shapes.push(glitch);
 
-// 23. QUANTUM PULSAR (Geometric Reactor with sharp interlacing spikes)
+// Shape 23: Quantum Pulsar
 let pulsar = [];
 for (let i = 0; i < TOTAL_POINTS; i++) {
     let t = i / (TOTAL_POINTS - 1);
     let phi = Math.acos(1 - 2 * t);
     let theta = Math.PI * (1 + Math.sqrt(5)) * i;
-
     let spikes = Math.abs(Math.sin(theta * 6) * Math.cos(phi * 6));
     let r = 0.4 + 0.9 * Math.pow(spikes, 1.5);
-
-    pulsar.push({
-        x: r * Math.sin(phi) * Math.cos(theta),
-        y: r * Math.sin(phi) * Math.sin(theta),
-        z: r * Math.cos(phi)
-    });
+    pulsar.push({ x: r * Math.sin(phi) * Math.cos(theta), y: r * Math.sin(phi) * Math.sin(theta), z: r * Math.cos(phi) });
 }
 shapes.push(pulsar);
 
-// 24. ATLAS MAP (Interwoven cosmic paths and nodes)
+// Shape 24: Atlas Map
 let atlas = [];
 for (let i = 0; i < TOTAL_POINTS; i++) {
     let t = i / (TOTAL_POINTS - 1), u = t * Math.PI * 2 * 60, v = t * Math.PI * 2 * 4;
@@ -480,42 +373,38 @@ for (let i = 0; i < TOTAL_POINTS; i++) {
 }
 shapes.push(atlas);
 
-// 25. BLOOD RUNE (Sharp, monolithic stone geometry with scratched edges)
+// Shape 25: Blood Rune
 let bloodRune = [];
 for (let i = 0; i < TOTAL_POINTS; i++) {
     let t = i / (TOTAL_POINTS - 1), theta = t * Math.PI * 2 * 40;
     let r = 0.8 * Math.sign(Math.cos(theta * 4)) * Math.sqrt(Math.abs(Math.cos(theta * 4)));
-    let y = 0.8 * Math.sin(theta * 3) + 0.1 * Math.sin(t * 1000); // Scratched effect
+    let y = 0.8 * Math.sin(theta * 3) + 0.1 * Math.sin(t * 1000); 
     bloodRune.push({ x: r * Math.cos(theta), y: y, z: r * Math.sin(theta) });
 }
 shapes.push(bloodRune);
 
-// 26. HELLFORGE (Demonic, twisted spikes rotating upon themselves)
+// Shape 26: Hellforge
 let hellforge = [];
 for (let i = 0; i < TOTAL_POINTS; i++) {
     let t = i / (TOTAL_POINTS - 1), u = t * Math.PI * 2 * 80;
     let r = 0.5 + 0.7 * Math.abs(Math.sin(u * 2.5));
     let twist = t * Math.PI * 4;
-    hellforge.push({ 
-        x: r * Math.cos(u + twist), 
-        y: 1.5 * (t - 0.5) * Math.sin(u * 5), 
-        z: r * Math.sin(u + twist) 
-    });
+    hellforge.push({ x: r * Math.cos(u + twist), y: 1.5 * (t - 0.5) * Math.sin(u * 5), z: r * Math.sin(u + twist) });
 }
 shapes.push(hellforge);
 
-// 27. PHYSICS COLLIDER (Tight 3D grid network)
+// Shape 27: Physics Collider
 let collider = [];
 for (let i = 0; i < TOTAL_POINTS; i++) {
     let t = i / (TOTAL_POINTS - 1), u = t * Math.PI * 2 * 100;
     let x = Math.max(-0.7, Math.min(0.7, 1.2 * Math.cos(u)));
     let y = Math.max(-0.7, Math.min(0.7, 1.2 * Math.sin(u)));
-    let z = 0.7 * Math.sin(t * Math.PI * 20); // Travels up and down in layers
+    let z = 0.7 * Math.sin(t * Math.PI * 20); 
     collider.push({ x, y, z });
 }
 shapes.push(collider);
 
-// 28. TESSERACT (Hypercube with solid corners and dense scanlines)
+// Shape 28: Tesseract
 let tesseract = [];
 for (let i = 0; i < TOTAL_POINTS; i++) {
     let t = i / (TOTAL_POINTS - 1), u = t * Math.PI * 2 * 50;
@@ -525,17 +414,17 @@ for (let i = 0; i < TOTAL_POINTS; i++) {
 }
 shapes.push(tesseract);
 
-// 29. WORMHOLE (Deep space tunnel warping in depth)
+// Shape 29: Wormhole
 let wormhole = [];
 for (let i = 0; i < TOTAL_POINTS; i++) {
     let t = i / (TOTAL_POINTS - 1), theta = t * Math.PI * 2 * 150;
-    let z = 2.0 * (t - 0.5); // Goes very deep
-    let r = 0.2 + 1.2 * Math.pow(Math.abs(z), 2); // Becomes massive at the ends
+    let z = 2.0 * (t - 0.5); 
+    let r = 0.2 + 1.2 * Math.pow(Math.abs(z), 2); 
     wormhole.push({ x: r * Math.cos(theta), y: r * Math.sin(theta), z: z });
 }
 shapes.push(wormhole);
 
-// 30. LIQUID METAL (Organic Metaball, constantly undulating)
+// Shape 30: Liquid Metal
 let liquidMetal = [];
 for (let i = 0; i < TOTAL_POINTS; i++) {
     let t = i / (TOTAL_POINTS - 1), phi = Math.acos(1 - 2 * t), theta = Math.PI * 100 * t;
@@ -544,27 +433,27 @@ for (let i = 0; i < TOTAL_POINTS; i++) {
 }
 shapes.push(liquidMetal);
 
-// 31. CRYSTAL SHARD (Cut diamond edges)
+// Shape 31: Crystal Shard
 let crystalShard = [];
 for (let i = 0; i < TOTAL_POINTS; i++) {
     let t = i / (TOTAL_POINTS - 1), u = t * Math.PI * 2 * 40;
-    let r = 0.6 / (Math.abs(Math.cos(u * 3)) + Math.abs(Math.sin(u * 3))); // Triangular base
-    let y = 1.2 * (t - 0.5) * (2.0 - r); // Tapers at top and bottom
+    let r = 0.6 / (Math.abs(Math.cos(u * 3)) + Math.abs(Math.sin(u * 3))); 
+    let y = 1.2 * (t - 0.5) * (2.0 - r); 
     crystalShard.push({ x: r * Math.cos(u), y: y, z: r * Math.sin(u) });
 }
 shapes.push(crystalShard);
 
-// 32. MILKY WAY (Spiral galaxy with a condensed core)
+// Shape 32: Milky Way
 let galaxy = [];
 for (let i = 0; i < TOTAL_POINTS; i++) {
     let t = i / (TOTAL_POINTS - 1), theta = t * Math.PI * 2 * 20;
     let r = 1.5 * Math.pow(t, 0.5);
-    let wobble = Math.sin(theta * 100) * 0.05; // Adds the stardust effect
+    let wobble = Math.sin(theta * 100) * 0.05; 
     galaxy.push({ x: (r + wobble) * Math.cos(theta - r * 3), y: 0.2 * Math.sin(theta * 5) * (1-t), z: (r + wobble) * Math.sin(theta - r * 3) });
 }
 shapes.push(galaxy);
 
-// 33. DEEP SEA JELLYFISH (Bell-shaped with tentacles)
+// Shape 33: Deep Sea Jellyfish
 let jellyfish = [];
 for (let i = 0; i < TOTAL_POINTS; i++) {
     let t = i / (TOTAL_POINTS - 1), theta = t * Math.PI * 2 * 80;
@@ -575,7 +464,7 @@ for (let i = 0; i < TOTAL_POINTS; i++) {
 }
 shapes.push(jellyfish);
 
-// 34. MAGNETIC FIELD (Toroidal energy lines flipping poles)
+// Shape 34: Magnetic Field
 let magneticField = [];
 for (let i = 0; i < TOTAL_POINTS; i++) {
     let t = i / (TOTAL_POINTS - 1), u = t * Math.PI * 2 * 60, v = t * Math.PI * 2 * 2;
@@ -584,7 +473,7 @@ for (let i = 0; i < TOTAL_POINTS; i++) {
 }
 shapes.push(magneticField);
 
-// 35. SUPERNOVA (A sphere exploding outwards in rings)
+// Shape 35: Supernova
 let supernova = [];
 for (let i = 0; i < TOTAL_POINTS; i++) {
     let t = i / (TOTAL_POINTS - 1), phi = Math.acos(1 - 2 * t), theta = Math.PI * 150 * t;
@@ -593,28 +482,28 @@ for (let i = 0; i < TOTAL_POINTS; i++) {
 }
 shapes.push(supernova);
 
-// 36. DNA MUTATION (Double helix twisting upon itself in 3D)
+// Shape 36: DNA Mutation
 let dnaMutation = [];
 for (let i = 0; i < TOTAL_POINTS; i++) {
     let t = i / (TOTAL_POINTS - 1), theta = t * Math.PI * 2 * 30;
     let offset = (i % 2 === 0) ? 0 : Math.PI;
-    let r = 0.5 + 0.2 * Math.sin(t * Math.PI * 10); // The mutation (thickens and shrinks)
+    let r = 0.5 + 0.2 * Math.sin(t * Math.PI * 10); 
     dnaMutation.push({ x: r * Math.cos(theta + offset), y: 2.0 * (t - 0.5), z: r * Math.sin(theta + offset) });
 }
 shapes.push(dnaMutation);
 
-// 37. HOLOGRAPHIC CUBE (Rotating box made of interference lines)
+// Shape 37: Holographic Cube
 let holoCube = [];
 for (let i = 0; i < TOTAL_POINTS; i++) {
     let t = i / (TOTAL_POINTS - 1), u = t * Math.PI * 2 * 150;
     let x = 0.8 * Math.cos(u) * Math.pow(Math.abs(Math.cos(u)), 0.1);
     let z = 0.8 * Math.sin(u) * Math.pow(Math.abs(Math.sin(u)), 0.1);
-    let y = 1.2 * (t - 0.5) * Math.sign(Math.sin(u * 5)); // Glitchy scanlines
+    let y = 1.2 * (t - 0.5) * Math.sign(Math.sin(u * 5)); 
     holoCube.push({ x, y, z });
 }
 shapes.push(holoCube);
 
-// 38. SONIC WAVE (Cylindrical waveform torn apart by frequencies)
+// Shape 38: Sonic Wave
 let sonicWave = [];
 for (let i = 0; i < TOTAL_POINTS; i++) {
     let t = i / (TOTAL_POINTS - 1), u = t * Math.PI * 2 * 50;
@@ -623,7 +512,7 @@ for (let i = 0; i < TOTAL_POINTS; i++) {
 }
 shapes.push(sonicWave);
 
-// 39. INFINITY MIRROR (Advanced 3D Lissajous knot)
+// Shape 39: Infinity Mirror
 let infinityMirror = [];
 for (let i = 0; i < TOTAL_POINTS; i++) {
     let t = i / (TOTAL_POINTS - 1), u = t * Math.PI * 2 * 4;
@@ -634,7 +523,7 @@ for (let i = 0; i < TOTAL_POINTS; i++) {
 }
 shapes.push(infinityMirror);
 
-// 40. SACRED HALO (Floating, overlapping holy rings)
+// Shape 40: Sacred Halo
 let sacredHalo = [];
 for (let i = 0; i < TOTAL_POINTS; i++) {
     let t = i / (TOTAL_POINTS - 1), u = t * Math.PI * 2 * 100;
@@ -648,7 +537,7 @@ for (let i = 0; i < TOTAL_POINTS; i++) {
 }
 shapes.push(sacredHalo);
 
-// 41. TIME GLASS (Sand falling through a tight core)
+// Shape 41: Time Glass
 let timeGlass = [];
 for (let i = 0; i < TOTAL_POINTS; i++) {
     let t = i / (TOTAL_POINTS - 1), u = t * Math.PI * 2 * 100;
@@ -658,13 +547,12 @@ for (let i = 0; i < TOTAL_POINTS; i++) {
 }
 shapes.push(timeGlass);
 
-// 42. ATOM CORE (Electrons in fast orbit)
+// Shape 42: Atom Core
 let atomCore = [];
 for (let i = 0; i < TOTAL_POINTS; i++) {
     let t = i / (TOTAL_POINTS - 1), u = t * Math.PI * 2 * 120;
     let orbit = Math.floor(t * 4);
     let x = Math.cos(u), y = Math.sin(u), z = 0;
-    // Rotates each orbit axis
     if (orbit === 1) { z = y; y = 0; }
     if (orbit === 2) { z = x; x = 0; }
     if (orbit === 3) { let temp = x; x = y * 0.7; y = temp * 0.7; z = Math.sin(u); }
@@ -672,27 +560,25 @@ for (let i = 0; i < TOTAL_POINTS; i++) {
 }
 shapes.push(atomCore);
 
-// 43. CYBER TORNADO (Square, digital vortex)
+// Shape 43: Cyber Tornado
 let cyberTornado = [];
 for (let i = 0; i < TOTAL_POINTS; i++) {
     let t = i / (TOTAL_POINTS - 1), u = t * Math.PI * 2 * 60;
     let r = 0.2 + 1.2 * t;
-    // Forces the spiral to snap in sharp 90-degree angles
     let x = r * Math.cos(u) * Math.pow(Math.abs(Math.cos(u)), 0.1);
     let z = r * Math.sin(u) * Math.pow(Math.abs(Math.sin(u)), 0.1);
     cyberTornado.push({ x, y: 1.5 * (t - 0.5), z });
 }
 shapes.push(cyberTornado);
 
-
-// --- STARFIELD GENERATOR ---
+// --- STARFIELD ---
 const stars = [];
 const NUM_STARS = 1500;
 for (let i = 0; i < NUM_STARS; i++) {
     stars.push({ x: (Math.random() - 0.5) * 6000, y: (Math.random() - 0.5) * 6000, z: Math.random() * 6000 });
 }
 
-// --- RANDOM STATE MACHINE LOGIC ---
+// State Machine Initialization
 let lastCycle = -1;
 let fromIndex = Math.floor(Math.random() * shapes.length);
 let toIndex = Math.floor(Math.random() * shapes.length);
@@ -700,52 +586,55 @@ if (fromIndex === toIndex) toIndex = (toIndex + 1) % shapes.length;
 
 
 // ==========================================
-// METHOD 1: LOCAL AUDIO FILE (UNIVERSAL/MOBILE)
+// 4. SHARED AUDIO CONTEXT INITIALIZATION
 // ==========================================
+async function initAudioContext() {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!audioContext) {
+        audioContext = new AudioContext();
+    }
+    if (audioContext.state === 'suspended') {
+        await audioContext.resume();
+    }
+}
 
-// STEP 1: USER SELECTS THE FILE
-audioUpload.addEventListener('change', function() {
-    selectedFile = this.files[0];
-    if (!selectedFile) return;
+// Cleans up the previous source to prevent audio overlap
+function cleanupSource() {
+    if (source) {
+        source.disconnect();
+        source = null;
+    }
+    if (audioElement) {
+        audioElement.pause();
+        audioElement.removeAttribute('src'); 
+        audioElement.load();
+        audioElement = null;
+    }
+}
 
-    // Display the file name and reveal the "Play" button
-    fileNameDisplay.innerText = "Ready: " + selectedFile.name;
-    filePlaySection.style.display = 'block';
-});
 
-// STEP 2: USER CLICKS PLAY (Decodes AudioBuffer to bypass Mobile Restrictions)
-playSelectedBtn.addEventListener('click', async () => {
-    if (!selectedFile) return;
-
+// ==========================================
+// METHOD 1: LIVE RADIO STREAM
+// ==========================================
+playRadioBtn.addEventListener('click', async () => {
     try {
-        // Change button text to indicate processing (helps mobile users know it's loading)
-        const originalBtnText = playSelectedBtn.innerText;
-        playSelectedBtn.innerText = "Processing audio...";
-        playSelectedBtn.disabled = true;
+        const originalText = playRadioBtn.innerText;
+        playRadioBtn.innerText = "Connecting to Radio...";
+        playRadioBtn.disabled = true;
 
-        // 1. Initialize AudioContext ON CLICK (Crucial for mobile autoplay policies)
-        const AudioContext = window.AudioContext || window.webkitAudioContext;
-        if (!audioContext) {
-            audioContext = new AudioContext();
-        }
-        if (audioContext.state === 'suspended') {
-            await audioContext.resume();
-        }
+        await initAudioContext();
+        cleanupSource();
 
-        // 2. Read the file into memory as an ArrayBuffer (Raw Data)
-        const arrayBuffer = await selectedFile.arrayBuffer();
+        // Using a reliable CORS proxy to bypass strict mobile browser security 
+        const proxyUrl = "https://corsproxy.io/?";
+        const targetStream = radioSelect.value;
+        const proxiedStreamUrl = proxyUrl + encodeURIComponent(targetStream);
 
-        // 3. Decode the raw data into pure audio (This skips the HTML5 <audio> element entirely)
-        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-
-        // 4. Build a source node that can play the decoded buffer
-        if (source) {
-            source.disconnect(); // Clean up if a previous song was playing
-        }
-        source = audioContext.createBufferSource();
-        source.buffer = audioBuffer;
-
-        // 5. Connect the source to the visualizer analyzer, and then to the speakers
+        audioElement = new Audio();
+        audioElement.crossOrigin = "anonymous"; // Mandated for processing external audio
+        audioElement.src = proxiedStreamUrl;
+        
+        source = audioContext.createMediaElementSource(audioElement);
         if (!analyser) {
             analyser = audioContext.createAnalyser();
             analyser.fftSize = 512;
@@ -753,14 +642,66 @@ playSelectedBtn.addEventListener('click', async () => {
         source.connect(analyser);
         analyser.connect(audioContext.destination);
 
-        // 6. Start the audio!
-        source.start(0);
-
-        // Hide UI and start the visualization drawing loop
+        await audioElement.play();
+        
         container.style.display = 'none';
         draw();
 
-        // Clean up when the song is finished playing
+        // Restore button state
+        playRadioBtn.innerText = originalText;
+        playRadioBtn.disabled = false;
+
+    } catch (err) {
+        alert("Failed to connect to the radio. The server might be blocking mobile requests (CORS).");
+        playRadioBtn.innerText = "Play Radio & Visualize";
+        playRadioBtn.disabled = false;
+        console.error("Radio Error:", err);
+    }
+});
+
+
+// ==========================================
+// METHOD 2: LOCAL FILE (Universal Decoder)
+// ==========================================
+audioUpload.addEventListener('change', function() {
+    selectedFile = this.files[0];
+    if (!selectedFile) return;
+
+    fileNameDisplay.innerText = "File Ready: " + selectedFile.name;
+    filePlaySection.style.display = 'block';
+});
+
+playSelectedBtn.addEventListener('click', async () => {
+    if (!selectedFile) return;
+
+    try {
+        const originalBtnText = playSelectedBtn.innerText;
+        playSelectedBtn.innerText = "Processing audio data...";
+        playSelectedBtn.disabled = true;
+
+        await initAudioContext();
+        cleanupSource();
+
+        // We decode raw binary data instead of using <audio> to completely bypass mobile DRM/Autoplay bugs
+        const arrayBuffer = await selectedFile.arrayBuffer();
+        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+
+        source = audioContext.createBufferSource();
+        source.buffer = audioBuffer;
+
+        if (!analyser) {
+            analyser = audioContext.createAnalyser();
+            analyser.fftSize = 512;
+        }
+        
+        source.connect(analyser);
+        analyser.connect(audioContext.destination);
+        source.start(0);
+
+        container.style.display = 'none';
+        draw();
+
+        // Reset UI when the song ends
         source.onended = () => {
             cancelAnimationFrame(animationId);
             filePlaySection.style.display = 'none';
@@ -771,96 +712,77 @@ playSelectedBtn.addEventListener('click', async () => {
         };
 
     } catch (err) {
-        alert("An error occurred while reading the file. Ensure it is a standard audio file without DRM protection.");
-        playSelectedBtn.innerText = "Play & Visualize";
+        alert("Could not decode the file. Ensure it is a standard music file (MP3/WAV/FLAC) without DRM copy-protection.");
+        playSelectedBtn.innerText = "Play File & Visualize";
         playSelectedBtn.disabled = false;
-        console.error("Audio Decode Error:", err);
+        console.error("Decode Error:", err);
     }
 });
 
 
 // ==========================================
-// METHOD 2: SCREEN SHARE (DESKTOP ONLY)
+// METHOD 3: SCREEN SHARE (Desktop Only)
 // ==========================================
 startBtn.addEventListener('click', async () => {
     try {
-        // 1. Initialize AudioContext ON CLICK
-        const AudioContext = window.AudioContext || window.webkitAudioContext;
-        if (!audioContext) {
-            audioContext = new AudioContext();
-        }
-        if (audioContext.state === 'suspended') {
-            await audioContext.resume();
-        }
+        await initAudioContext();
+        cleanupSource();
 
-        // 2. Prompt user for screen/audio sharing
         const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
         
-        // --- LISTEN FOR "STOP SHARING" BUTTON ---
+        // Listen for the user clicking the browser's native "Stop Sharing" button
         stream.getVideoTracks()[0].onended = () => {
-            // Stop the animation loop to give CPU/GPU a break
             cancelAnimationFrame(animationId);
-            
-            // Safely close the audio connection
-            if (audioContext) {
-                audioContext.close();
-                audioContext = null;
-            }
-            
-            // Bring the landing page (container) back
+            cleanupSource();
             container.style.display = 'block';
-            
-            // Clear canvas so the last frame doesn't freeze on screen
             ctx.clearRect(0, 0, canvas.width, canvas.height);
         };
 
-        // 3. Connect the live stream to the analyzer
         source = audioContext.createMediaStreamSource(stream);
-        analyser = audioContext.createAnalyser();
-        analyser.fftSize = 512;
+        if (!analyser) {
+            analyser = audioContext.createAnalyser();
+            analyser.fftSize = 512;
+        }
         source.connect(analyser);
         
-        // Hide UI and start drawing
         container.style.display = 'none';
         draw();
     } catch (err) {
-        // Precise English error message alerting them of the missing toggle
-        alert("Audio stream not found. Please click 'Connect Audio' again and remember to toggle 'Also share tab audio' or 'Share system audio' in the popup window before sharing.");
+        alert("Audio stream not found. Please click 'Connect Audio' again and remember to toggle 'Share tab audio'.");
+        console.error("Screen Share Error:", err);
     }
 });
 
 
 // ==========================================
-// MAIN ANIMATION LOOP
+// 5. MAIN ANIMATION DRAW LOOP
 // ==========================================
 function draw() {
     animationId = requestAnimationFrame(draw);
     time += 0.015; 
     
-    // Process live audio data
+    // Extract frequency data
     const bufferLength = analyser.frequencyBinCount;
     const dataArray = new Uint8Array(bufferLength);
     analyser.getByteFrequencyData(dataArray);
 
-    // Calculate heavy bass impact based on low frequencies
+    // Calculate heavy bass punch using the lowest frequency bins
     let bassSum = 0;
     for (let i = 1; i <= 5; i++) bassSum += dataArray[i];
     let bassPunch = Math.pow((bassSum / 5) / 255, 3);
 
-    // Base rotation is slow, bass impact provides a sudden push
     figureRotation += 0.002 + (bassPunch * 0.015);
 
-    // --- RANDOMIZER TIMELINE LOGIC ---
+    // Timeline control for random shape transitions
     const CYCLE_LENGTH = 10;
     const HOLD_LENGTH = 6;
     let currentCycle = Math.floor(time / CYCLE_LENGTH);
     let cycleTime = time % CYCLE_LENGTH;
     
-    // Check if we hit a new 10-second period
+    // Transition trigger
     if (currentCycle !== lastCycle) {
         if (lastCycle !== -1) { 
             fromIndex = toIndex;
-            // Pick a new random shape that IS NOT the same as the current one
             let nextIndex;
             do {
                 nextIndex = Math.floor(Math.random() * shapes.length);
@@ -870,7 +792,6 @@ function draw() {
         lastCycle = currentCycle;
     }
 
-    // Calculate smooth morphing weight (0 to 1) for shape transitions
     let morphWeight = 0;
     if (cycleTime > HOLD_LENGTH) {
         let rawWeight = (cycleTime - HOLD_LENGTH) / (CYCLE_LENGTH - HOLD_LENGTH);
@@ -880,22 +801,18 @@ function draw() {
     const fromShape = shapes[fromIndex];
     const toShape = shapes[toIndex];
 
-    // Clear background with slight motion blur trail (opacity 0.4)
+    // Background trail effect
     ctx.fillStyle = 'rgba(5, 5, 12, 0.4)';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
-    // Use 'lighter' for glowing visual effects
     ctx.globalCompositeOperation = 'lighter';
 
-    // --- DRAW STARFIELD ---
+    // Draw interactive starfield
     ctx.fillStyle = `rgba(200, 220, 255, 0.8)`;
     ctx.beginPath();
     stars.forEach(star => {
-        // Stars accelerate based on bass punch
         let speed = 2 + (bassPunch * 60);
         star.z -= speed;
         
-        // Reset stars that fly past the camera
         if (star.z <= 0) {
             star.z = 6000;
             star.x = (Math.random() - 0.5) * 6000;
@@ -911,41 +828,34 @@ function draw() {
     });
     ctx.fill();
 
-    // Slow down the general axis swing
     let rotX = figureRotation * 0.15;
     let rotY = figureRotation * 0.25;
-    
-    // Color hue rotates over time and shifts entirely upon a new shape cycle
     let hue = (time * 15 + (currentCycle * 60)) % 360;
+    
     ctx.strokeStyle = `hsla(${hue}, 90%, 65%, ${0.5 + bassPunch * 0.5})`;
     ctx.lineWidth = 1.5;
     ctx.beginPath();
 
-    // --- DRAW THE ACTIVE 3D SHAPE ---
+    // Render the interpolated 3D shape
     for (let i = 0; i < TOTAL_POINTS; i++) {
-        // Linearly interpolate (morph) between the current shape and the next shape
         let targetX = fromShape[i].x + (toShape[i].x - fromShape[i].x) * morphWeight;
         let targetY = fromShape[i].y + (toShape[i].y - fromShape[i].y) * morphWeight;
         let targetZ = fromShape[i].z + (toShape[i].z - fromShape[i].z) * morphWeight;
 
-        // Sync specific points to specific audio frequencies from the analyzer
         let freqIndex = i % Math.floor(bufferLength / 2);
         let pointAudio = dataArray[freqIndex] / 255;
-        
-        // Push the radius outward based on audio intensity
         let dynamicRadius = BASE_RADIUS + (pointAudio * 80) + (Math.sin(i + time * 10) * 15 * bassPunch);
         
         let x = targetX * dynamicRadius;
         let y = targetY * dynamicRadius;
         let z = targetZ * dynamicRadius;
 
-        // Apply 3D rotation matrix transformations
+        // Apply 3D rotation
         let rotX_y = y * Math.cos(rotX) - z * Math.sin(rotX);
         let rotX_z = y * Math.sin(rotX) + z * Math.cos(rotX);
         let finalX = x * Math.cos(rotY) + rotX_z * Math.sin(rotY);
         let finalZ = -x * Math.sin(rotY) + rotX_z * Math.cos(rotY);
 
-        // Project the final 3D point onto the 2D canvas
         let proj = project(finalX, rotX_y, finalZ);
         
         if (proj) {
@@ -955,7 +865,7 @@ function draw() {
                 ctx.lineTo(proj.x, proj.y);
             }
             
-            // Draw tiny glowing dots on vertices reacting heavily to the music
+            // Highlight highly reactive vertices
             if (pointAudio > 0.7) {
                 ctx.fillStyle = `hsla(${hue}, 100%, 85%, 0.9)`;
                 ctx.fillRect(proj.x - 1, proj.y - 1, 2, 2);
@@ -963,7 +873,5 @@ function draw() {
         }
     }
     ctx.stroke();
-    
-    // Reset composite operation for the next frame
     ctx.globalCompositeOperation = 'source-over';
 }
