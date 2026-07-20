@@ -5,14 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="index, follow">
     
-    <!-- Primary SEO Metadata -->
     <title>LUMINA - Immersive 3D Audio Visualizer Online</title>
     <meta name="description" content="Experience music like never before with LUMINA. A powerful, interactive 3D audio visualizer running directly in your browser.">
     <meta name="author" content="LasBoi">
 
-    <!-- Link to external CSS file for styling -->
     <link rel="stylesheet" href="css/style.css">
-    <!-- Link to Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
@@ -27,20 +24,18 @@
         <input type="range" id="volumeSlider" min="0" max="1" step="0.01" value="1">
     </div>
 
-    <!-- Main container for the landing page UI -->
     <div id="container">
         <h1>LUMINA - Immersive Audio</h1>
         
         <div class="instructions">
             <p class="subtitle">Choose your preferred audio source to start the visualizer.</p>
 
-            <!-- METHOD 1: LIVE RADIO (Universal) -->
+            <!-- METHOD 1: LIVE RADIO -->
             <div class="method-card">
                 <strong class="method-title"><i class="fa-solid fa-radio"></i> Method 1: Live Radio</strong>
                 <p class="method-desc">Stream live internet radio directly. Guaranteed to work on mobile and desktop.</p>
                 
                 <select id="radioSelect" class="dropdown-select">
-                    <!-- Reliable SomaFM streams with native open CORS -->
                     <option value="https://ice1.somafm.com/groovesalad-128-mp3">Groove Salad (Chill/Downtempo)</option>
                     <option value="https://ice1.somafm.com/defcon-128-mp3">DEF CON Radio (Electronic/Hacking)</option>
                     <option value="https://ice1.somafm.com/spacestation-128-mp3">Space Station Soma (Space Ambient)</option>
@@ -55,24 +50,26 @@
                 </div>
             </div>
 
-            <!-- METHOD 2: LOCAL AUDIO FILE (Universal) -->
+            <!-- METHOD 2: LOCAL AUDIO FILE (Updated with Native Bridge) -->
             <div class="method-card">
                 <strong class="method-title"><i class="fa-solid fa-file-audio"></i> Method 2: Local Audio File</strong>
-                <p class="method-desc">Select any music file (MP3, WAV, FLAC, OGG, etc.) from your device.</p>
+                <p class="method-desc">Select any music file (MP3, WAV, FLAC, OGG) from your device.</p>
                 
                 <div class="btn-wrapper">
                     <input type="file" id="audioUpload" accept="audio/*" style="display: none;">
                     <label for="audioUpload" class="action-btn file-btn">Select Audio File</label>
                 </div>
 
-                <!-- Hidden until a file is selected -->
+                <!-- Hidden section holding the browser's native audio player -->
                 <div id="filePlaySection" class="hidden-section">
                     <p id="fileNameDisplay" class="file-name"></p>
-                    <button id="playSelectedBtn" class="action-btn play-file-btn">Play File & Visualize</button>
+                    <p style="font-size: 0.8em; color: #ff007f; margin-bottom: 8px;">Press play below to unlock mobile audio!</p>
+                    <!-- Using the browser's native controls bypasses Android Chrome's strict muting policies -->
+                    <audio id="nativeAudioPlayer" controls style="width: 100%; outline: none; border-radius: 8px;"></audio>
                 </div>
             </div>
 
-            <!-- METHOD 3: SCREEN SHARE (Desktop Only) -->
+            <!-- METHOD 3: SCREEN SHARE -->
             <div class="method-card desktop-only">
                 <strong class="method-title"><i class="fa-solid fa-desktop"></i> Method 3: Screen Share</strong>
                 <p class="method-desc">Play Spotify/YouTube in another tab. Share that tab to visualize it.</p>
@@ -83,13 +80,10 @@
         </div>
     </div>
     
-    <!-- The canvas element where the 3D visualizer is drawn -->
     <canvas id="visualizer"></canvas>
 
-    <!-- Main JavaScript file containing the application logic -->
     <script src="js/app.js"></script>
 
-    <!-- Footer section -->
     <div id="footer">
         Made with <i class="fa-solid fa-heart"></i> by <a href="https://steamcommunity.com/id/LasBoi/" target="_blank">LasBoi</a>
     </div>

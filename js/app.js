@@ -19,17 +19,17 @@ const playRadioBtn = document.getElementById('playRadioBtn');
 const audioUpload = document.getElementById('audioUpload');
 const filePlaySection = document.getElementById('filePlaySection');
 const fileNameDisplay = document.getElementById('fileNameDisplay');
-const playSelectedBtn = document.getElementById('playSelectedBtn');
-let selectedFile = null;
+const nativeAudioPlayer = document.getElementById('nativeAudioPlayer'); // The Native Bridge
+let localObjectURL = null;
 
 // Method 3: Desktop Screen Share Element
 const startBtn = document.getElementById('startBtn');
 
 // Audio Engine Variables
 let audioContext, analyser, source, activeAudioElement;
-let globalGainNode; // Master volume control node
+let globalGainNode; 
 let isMuted = false;
-let previousVolume = 1; // Remembers volume level before muting
+let previousVolume = 1; 
 
 let time = 0;             
 let figureRotation = 0;   
@@ -67,7 +67,6 @@ const BASE_RADIUS = 350;
 const shapes = [];
 const easeInOutCubic = t => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 
-// [Shape calculations remain the exact same as previous file - skipping redundant shapes comments for brevity, but they are fully preserved in execution]
 let sphere = []; for (let i = 0; i < TOTAL_POINTS; i++) { let t = i / (TOTAL_POINTS - 1); let phi = Math.acos(1 - 2 * t); let theta = Math.PI * (1 + Math.sqrt(5)) * i; sphere.push({ x: Math.sin(phi) * Math.cos(theta), y: Math.sin(phi) * Math.sin(theta), z: Math.cos(phi) }); } shapes.push(sphere);
 let torus = []; for (let i = 0; i < TOTAL_POINTS; i++) { let t = i / (TOTAL_POINTS - 1); let theta = t * Math.PI * 2 * 40; let phi = t * Math.PI * 2; let R = 0.7, r = 0.3; torus.push({ x: (R + r * Math.cos(theta)) * Math.cos(phi), y: (R + r * Math.cos(theta)) * Math.sin(phi), z: r * Math.sin(theta) }); } shapes.push(torus);
 let hourglass = []; for (let i = 0; i < TOTAL_POINTS; i++) { let t = i / (TOTAL_POINTS - 1); let theta = t * Math.PI * 2 * 50; let y = (t - 0.5) * 2; let r = 0.2 + (y * y); hourglass.push({ x: r * Math.cos(theta), y: y, z: r * Math.sin(theta) }); } shapes.push(hourglass);
@@ -130,24 +129,31 @@ if (fromIndex === toIndex) toIndex = (toIndex + 1) % shapes.length;
 // 4. SHARED AUDIO CONTEXT & NAVIGATION LOGIC
 // ==========================================
 
-// Global logic to return to the main menu and hide visualization UI
+// Stop visuals, clean audio tracks, and reset UI to default menu
 function returnToMenu() {
     cancelAnimationFrame(animationId);
     cleanupSource();
     container.style.display = 'block';
     backBtn.style.display = 'none';
-    volumeControl.style.display = 'none'; // Hide volume slider
+    volumeControl.style.display = 'none'; 
+    filePlaySection.style.display = 'none'; // Hide the native player section
+    
+    // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
-    // Reset all buttons in case they were left disabled
+    // Reset buttons
     playRadioBtn.innerText = "Play Radio & Visualize";
     playRadioBtn.disabled = false;
-    playSelectedBtn.innerText = "Play File & Visualize";
-    playSelectedBtn.disabled = false;
+    
+    // Clean up temporary object URL if one was created
+    if (localObjectURL) {
+        URL.revokeObjectURL(localObjectURL);
+        localObjectURL = null;
+    }
 }
 backBtn.addEventListener('click', returnToMenu);
 
-// Initializes the core Web Audio API components synchronously to respect Autoplay policies
+// Safely boot up Web Audio engine
 async function initAudioContext() {
     if (!audioContext) {
         const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -160,7 +166,7 @@ async function initAudioContext() {
         // Setup Analyzer
         analyser = audioContext.createAnalyser();
         analyser.fftSize = 512;
-        analyser.connect(globalGainNode); // Connect analyzer to volume node, not directly to speakers
+        analyser.connect(globalGainNode); 
     }
     
     if (audioContext.state === 'suspended') {
@@ -168,7 +174,7 @@ async function initAudioContext() {
     }
 }
 
-// Cleans up the previous source completely to prevent overlapping audio/memory leaks
+// Destroys all current audio bindings to prevent ghost-audio playing in background
 function cleanupSource() {
     if (source) {
         try { source.disconnect(); } catch(e){}
@@ -180,35 +186,44 @@ function cleanupSource() {
         activeAudioElement.load();
         activeAudioElement = null;
     }
+    // Specific cleanup for the native bridge player
+    nativeAudioPlayer.pause();
+    nativeAudioPlayer.removeAttribute('src');
+    nativeAudioPlayer.load();
 }
 
-// --- VOLUME CONTROL LOGIC ---
+// --- VOLUME SLIDER LOGIC ---
 volumeSlider.addEventListener('input', (e) => {
     const vol = parseFloat(e.target.value);
+    
+    // Apply volume to AudioContext Master Node (used for Radio & Screen Share)
     if (globalGainNode) globalGainNode.gain.value = vol;
     
-    // Update visual icon
+    // Apply volume directly to Native Player (used for Local Files)
+    nativeAudioPlayer.volume = vol;
+    
+    // Update visual UI icon
     muteIcon.className = vol === 0 ? 'fa-solid fa-volume-xmark' : 
                          vol < 0.5 ? 'fa-solid fa-volume-low' : 
                          'fa-solid fa-volume-high';
                          
     isMuted = vol === 0;
-    if (!isMuted) previousVolume = vol; // Save volume to restore after unmuting
+    if (!isMuted) previousVolume = vol; 
 });
 
 muteIcon.addEventListener('click', () => {
     if (isMuted) {
-        // Unmute
         isMuted = false;
         volumeSlider.value = previousVolume > 0 ? previousVolume : 1;
         if (globalGainNode) globalGainNode.gain.value = volumeSlider.value;
+        nativeAudioPlayer.volume = volumeSlider.value;
         muteIcon.className = volumeSlider.value < 0.5 ? 'fa-solid fa-volume-low' : 'fa-solid fa-volume-high';
     } else {
-        // Mute
         isMuted = true;
         previousVolume = volumeSlider.value;
         volumeSlider.value = 0;
         if (globalGainNode) globalGainNode.gain.value = 0;
+        nativeAudioPlayer.volume = 0;
         muteIcon.className = 'fa-solid fa-volume-xmark';
     }
 });
@@ -228,7 +243,6 @@ playRadioBtn.addEventListener('click', async () => {
 
         const targetStreamUrl = radioSelect.value;
 
-        // Use a dedicated HTML5 Audio element for the radio
         activeAudioElement = new Audio();
         activeAudioElement.crossOrigin = "anonymous"; 
         activeAudioElement.src = targetStreamUrl;
@@ -236,11 +250,10 @@ playRadioBtn.addEventListener('click', async () => {
         activeAudioElement.addEventListener('canplay', async () => {
             try {
                 source = audioContext.createMediaElementSource(activeAudioElement);
-                source.connect(analyser); // Connect to analyzer (which goes to volume node)
+                source.connect(analyser); // Routes to globalGainNode
 
                 await activeAudioElement.play();
                 
-                // Show UI controls, hide main menu
                 container.style.display = 'none';
                 backBtn.style.display = 'flex';
                 volumeControl.style.display = 'flex';
@@ -275,7 +288,7 @@ playRadioBtn.addEventListener('click', async () => {
 
 
 // ==========================================
-// METHOD 2: LOCAL FILE (Universal Decoder)
+// METHOD 2: LOCAL AUDIO FILE (THE NATIVE BRIDGE)
 // ==========================================
 audioUpload.addEventListener('change', function() {
     selectedFile = this.files[0];
@@ -283,49 +296,43 @@ audioUpload.addEventListener('change', function() {
 
     fileNameDisplay.innerText = "File Ready: " + selectedFile.name;
     filePlaySection.style.display = 'block';
+
+    // Create a local internal URL
+    if (localObjectURL) URL.revokeObjectURL(localObjectURL);
+    localObjectURL = URL.createObjectURL(selectedFile);
+    
+    // Inject it into the Native DOM Player to bypass Android Chrome muting rules
+    nativeAudioPlayer.src = localObjectURL;
+    // Ensure the player inherits our master volume setting immediately
+    nativeAudioPlayer.volume = parseFloat(volumeSlider.value); 
 });
 
-playSelectedBtn.addEventListener('click', async () => {
-    if (!selectedFile) return;
-
+// We listen for the moment the user clicks the NATIVE play button on the browser's audio player
+nativeAudioPlayer.addEventListener('play', async () => {
     try {
-        const originalBtnText = playSelectedBtn.innerText;
-        playSelectedBtn.innerText = "Processing audio...";
-        playSelectedBtn.disabled = true;
-
-        await initAudioContext(); // Must be synchronous to click
-        cleanupSource();
-
-        // Android Chrome Fix: Use ObjectURL instead of buffering entire file to prevent RAM crash
-        const objectURL = URL.createObjectURL(selectedFile);
+        await initAudioContext();
         
-        activeAudioElement = new Audio();
-        // CRITICAL FIX: Do NOT set crossOrigin here. It breaks local Blob files on Android Chrome.
-        activeAudioElement.src = objectURL;
-        
-        source = audioContext.createMediaElementSource(activeAudioElement);
-        source.connect(analyser); // Connect to analyzer (which goes to volume node)
+        // We only connect the analyzer if it hasn't been connected yet for this session
+        if (!source) {
+            source = audioContext.createMediaElementSource(nativeAudioPlayer);
+            source.connect(analyser); // Analyzer routes out through globalGainNode 
+            // Note: The native player retains its own volume parameter natively
+        }
 
-        await activeAudioElement.play();
-
-        // Show UI controls, hide main menu
+        // Hide UI and trigger visualizer
         container.style.display = 'none';
         backBtn.style.display = 'flex';
         volumeControl.style.display = 'flex';
         draw();
 
-        // Clean up memory and return to menu when song ends naturally
-        activeAudioElement.onended = () => {
-            URL.revokeObjectURL(objectURL);
-            returnToMenu();
-        };
-
     } catch (err) {
-        alert("Could not play the file. Ensure it is a standard music format.");
-        playSelectedBtn.innerText = "Play File & Visualize";
-        playSelectedBtn.disabled = false;
-        console.error("File Playback Error:", err);
+        console.error("Native Bridge Error:", err);
     }
+});
+
+// Auto-return to menu when song ends naturally
+nativeAudioPlayer.addEventListener('ended', () => {
+    returnToMenu();
 });
 
 
@@ -364,19 +371,16 @@ function draw() {
     animationId = requestAnimationFrame(draw);
     time += 0.015; 
     
-    // Extract frequency data
     const bufferLength = analyser.frequencyBinCount;
     const dataArray = new Uint8Array(bufferLength);
     analyser.getByteFrequencyData(dataArray);
 
-    // Calculate heavy bass punch using the lowest frequency bins
     let bassSum = 0;
     for (let i = 1; i <= 5; i++) bassSum += dataArray[i];
     let bassPunch = Math.pow((bassSum / 5) / 255, 3);
 
     figureRotation += 0.002 + (bassPunch * 0.015);
 
-    // Timeline control for random shape transitions
     const CYCLE_LENGTH = 10;
     const HOLD_LENGTH = 6;
     let currentCycle = Math.floor(time / CYCLE_LENGTH);
@@ -403,12 +407,10 @@ function draw() {
     const fromShape = shapes[fromIndex];
     const toShape = shapes[toIndex];
 
-    // Background trail effect
     ctx.fillStyle = 'rgba(5, 5, 12, 0.4)';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.globalCompositeOperation = 'lighter';
 
-    // Draw interactive starfield
     ctx.fillStyle = `rgba(200, 220, 255, 0.8)`;
     ctx.beginPath();
     stars.forEach(star => {
@@ -438,7 +440,6 @@ function draw() {
     ctx.lineWidth = 1.5;
     ctx.beginPath();
 
-    // Render the interpolated 3D shape
     for (let i = 0; i < TOTAL_POINTS; i++) {
         let targetX = fromShape[i].x + (toShape[i].x - fromShape[i].x) * morphWeight;
         let targetY = fromShape[i].y + (toShape[i].y - fromShape[i].y) * morphWeight;
@@ -452,7 +453,6 @@ function draw() {
         let y = targetY * dynamicRadius;
         let z = targetZ * dynamicRadius;
 
-        // Apply 3D rotation
         let rotX_y = y * Math.cos(rotX) - z * Math.sin(rotX);
         let rotX_z = y * Math.sin(rotX) + z * Math.cos(rotX);
         let finalX = x * Math.cos(rotY) + rotX_z * Math.sin(rotY);
@@ -467,7 +467,6 @@ function draw() {
                 ctx.lineTo(proj.x, proj.y);
             }
             
-            // Highlight highly reactive vertices
             if (pointAudio > 0.7) {
                 ctx.fillStyle = `hsla(${hue}, 100%, 85%, 0.9)`;
                 ctx.fillRect(proj.x - 1, proj.y - 1, 2, 2);
