@@ -40,7 +40,7 @@ const camZ = -1400;
 
 function project(x, y, z) {
     const rz = z - camZ;
-    if (rz <= 0) return null; 
+    if (rz <= 0) return null; // Prevents division by zero if point is behind camera
     const scale = focalLength / rz;
     return {
         x: (canvas.width / 2) + (x * scale),
@@ -571,7 +571,7 @@ for (let i = 0; i < TOTAL_POINTS; i++) {
 }
 shapes.push(cyberTornado);
 
-// --- STARFIELD ---
+// --- STARFIELD GENERATOR ---
 const stars = [];
 const NUM_STARS = 1500;
 for (let i = 0; i < NUM_STARS; i++) {
@@ -625,34 +625,53 @@ playRadioBtn.addEventListener('click', async () => {
         await initAudioContext();
         cleanupSource();
 
-        // Using a reliable CORS proxy to bypass strict mobile browser security 
-        const proxyUrl = "https://corsproxy.io/?";
-        const targetStream = radioSelect.value;
-        const proxiedStreamUrl = proxyUrl + encodeURIComponent(targetStream);
+        // Connect directly to the radio stream without a free CORS proxy
+        // NOTE: The radio server must have CORS open. SomaFM supports this natively.
+        const targetStreamUrl = radioSelect.value;
 
         audioElement = new Audio();
-        audioElement.crossOrigin = "anonymous"; // Mandated for processing external audio
-        audioElement.src = proxiedStreamUrl;
+        audioElement.crossOrigin = "anonymous"; // Must be set before assigning the src
+        audioElement.src = targetStreamUrl;
         
-        source = audioContext.createMediaElementSource(audioElement);
-        if (!analyser) {
-            analyser = audioContext.createAnalyser();
-            analyser.fftSize = 512;
-        }
-        source.connect(analyser);
-        analyser.connect(audioContext.destination);
+        // Wait for the audio element to buffer enough data to play safely
+        audioElement.addEventListener('canplay', async () => {
+            try {
+                source = audioContext.createMediaElementSource(audioElement);
+                if (!analyser) {
+                    analyser = audioContext.createAnalyser();
+                    analyser.fftSize = 512;
+                }
+                source.connect(analyser);
+                analyser.connect(audioContext.destination);
 
-        await audioElement.play();
-        
-        container.style.display = 'none';
-        draw();
+                await audioElement.play();
+                
+                container.style.display = 'none';
+                draw();
 
-        // Restore button state
-        playRadioBtn.innerText = originalText;
-        playRadioBtn.disabled = false;
+                playRadioBtn.innerText = originalText;
+                playRadioBtn.disabled = false;
+            } catch (playError) {
+                console.error("Playback error:", playError);
+                alert("The browser blocked playback. Please interact with the page first.");
+                playRadioBtn.innerText = "Play Radio & Visualize";
+                playRadioBtn.disabled = false;
+            }
+        }, { once: true });
+
+        // Catch errors if the server denies access (CORS failure) or is offline
+        audioElement.addEventListener('error', (e) => {
+            console.error("Audio Element Error:", e);
+            alert("Stream failed to load. The radio station server blocked access (CORS) or the stream is currently offline. Please try SomaFM.");
+            playRadioBtn.innerText = "Play Radio & Visualize";
+            playRadioBtn.disabled = false;
+        });
+
+        // Force the browser to start loading the stream
+        audioElement.load();
 
     } catch (err) {
-        alert("Failed to connect to the radio. The server might be blocking mobile requests (CORS).");
+        alert("Failed to initialize the audio engine.");
         playRadioBtn.innerText = "Play Radio & Visualize";
         playRadioBtn.disabled = false;
         console.error("Radio Error:", err);
@@ -682,7 +701,7 @@ playSelectedBtn.addEventListener('click', async () => {
         await initAudioContext();
         cleanupSource();
 
-        // We decode raw binary data instead of using <audio> to completely bypass mobile DRM/Autoplay bugs
+        // We decode raw binary data to bypass all mobile DRM/Autoplay/MediaElement bugs
         const arrayBuffer = await selectedFile.arrayBuffer();
         const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
 
@@ -701,7 +720,6 @@ playSelectedBtn.addEventListener('click', async () => {
         container.style.display = 'none';
         draw();
 
-        // Reset UI when the song ends
         source.onended = () => {
             cancelAnimationFrame(animationId);
             filePlaySection.style.display = 'none';
@@ -730,7 +748,6 @@ startBtn.addEventListener('click', async () => {
 
         const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
         
-        // Listen for the user clicking the browser's native "Stop Sharing" button
         stream.getVideoTracks()[0].onended = () => {
             cancelAnimationFrame(animationId);
             cleanupSource();
@@ -779,7 +796,6 @@ function draw() {
     let currentCycle = Math.floor(time / CYCLE_LENGTH);
     let cycleTime = time % CYCLE_LENGTH;
     
-    // Transition trigger
     if (currentCycle !== lastCycle) {
         if (lastCycle !== -1) { 
             fromIndex = toIndex;
