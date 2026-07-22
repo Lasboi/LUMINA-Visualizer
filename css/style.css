@@ -1,4 +1,4 @@
-/* Reset basic styles and use Flexbox for bulletproof centering */
+/* Base Resets & Flexbox Centering */
 body, html {
     margin: 0;
     padding: 0;
@@ -12,6 +12,7 @@ body, html {
     align-items: center;       
 }
 
+/* Base style for Top Navigation Elements (Back Button & Volume) */
 .top-nav-btn {
     position: fixed;
     top: 20px;
@@ -21,8 +22,10 @@ body, html {
     border-radius: 8px;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
     transition: all 0.2s ease;
+    backdrop-filter: blur(8px); /* Modern blur effect */
 }
 
+/* Back Button Specific Styling */
 .back-btn {
     left: 20px;
     color: #fff;
@@ -42,6 +45,7 @@ body, html {
     transform: scale(1.05);
 }
 
+/* Volume Control Specific Styling */
 .volume-container {
     right: 20px;
     padding: 10px 15px;
@@ -63,6 +67,7 @@ body, html {
     color: #ff007f;
 }
 
+/* Custom Webkit Slider Styling */
 .volume-container input[type="range"] {
     -webkit-appearance: none;
     appearance: none;
@@ -90,6 +95,7 @@ body, html {
     box-shadow: 0 0 10px #ff007f;
 }
 
+/* Main UI Container */
 #container {
     position: relative; 
     z-index: 10; 
@@ -114,15 +120,18 @@ h1 {
     font-size: 0.95rem;
 }
 
+/* Menu Box with Frost Glass Effect */
 .instructions {
-    background: rgba(15, 15, 20, 0.85);
+    background: rgba(15, 15, 20, 0.70);
     border: 1px solid rgba(255, 255, 255, 0.1);
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7);
     border-radius: 12px;
     padding: 20px;
     text-align: left;
+    backdrop-filter: blur(12px); /* Ensures text is readable over the moving canvas */
 }
 
+/* Individual Method Cards */
 .method-card {
     background: rgba(0, 0, 0, 0.4);
     border-radius: 8px;
@@ -141,6 +150,7 @@ h1 {
     margin-bottom: 5px;
 }
 
+/* Theme colors for different methods */
 .method-card:nth-child(2) .method-title { color: #f0c040; } 
 .method-card:nth-child(3) .method-title { color: #66c0f4; } 
 .method-card:nth-child(4) .method-title { color: #ff007f; } 
@@ -168,6 +178,7 @@ h1 {
     text-align: center;
 }
 
+/* Interactive Action Buttons */
 .action-btn {
     display: inline-block;
     padding: 10px 25px;
@@ -212,6 +223,7 @@ h1 {
     word-break: break-all;
 }
 
+/* 3D Canvas Background */
 canvas {
     position: fixed;
     top: 0;
@@ -221,6 +233,7 @@ canvas {
     z-index: 1; 
 }
 
+/* Footer Section */
 #footer { 
     position: fixed; 
     bottom: 15px; 
@@ -240,6 +253,7 @@ canvas {
     28%, 70% { transform: scale(1); } 
 }
 
+/* Responsive adjustments for mobile devices */
 @media (max-width: 768px) {
     .desktop-only { display: none !important; }
     h1 { font-size: 1.8rem; }

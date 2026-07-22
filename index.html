@@ -5,33 +5,35 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="index, follow">
     
-    <title>LUMINA - Immersive 3D Audio Visualizer Online</title>
+    <!-- Primary SEO Metadata -->
+    <title>LUMINA - Immersive 3D Audio Visualizer</title>
     <meta name="description" content="Experience music like never before with LUMINA. A powerful, interactive 3D audio visualizer running directly in your browser.">
     <meta name="author" content="LasBoi">
 
+    <!-- External CSS & Icons -->
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-    <!-- Top Left: Back Button -->
+    <!-- Top Left: Navigation Button (Hidden during menu state) -->
     <button id="backBtn" class="top-nav-btn back-btn" style="display: none;">
         <i class="fa-solid fa-arrow-left"></i> Menu
     </button>
 
-    <!-- Top Right: Volume Control -->
+    <!-- Top Right: Master Volume Control -->
     <div id="volumeControl" class="top-nav-btn volume-container" style="display: none;">
         <i id="muteIcon" class="fa-solid fa-volume-high"></i>
         <input type="range" id="volumeSlider" min="0" max="1" step="0.01" value="1">
     </div>
 
-    <!-- Main Menu UI -->
+    <!-- Main Menu Interface -->
     <div id="container">
         <h1>LUMINA - Immersive Audio</h1>
         
         <div class="instructions">
             <p class="subtitle">Choose your preferred audio source to start the visualizer.</p>
 
-            <!-- METHOD 1: LIVE RADIO -->
+            <!-- METHOD 1: LIVE INTERNET RADIO -->
             <div class="method-card">
                 <strong class="method-title"><i class="fa-solid fa-radio"></i> Method 1: Live Radio</strong>
                 <p class="method-desc">Stream live internet radio directly. Guaranteed to work on mobile and desktop.</p>
@@ -67,7 +69,7 @@
                 </div>
             </div>
 
-            <!-- METHOD 3: SCREEN SHARE -->
+            <!-- METHOD 3: BROWSER TAB AUDIO / SCREEN SHARE -->
             <div class="method-card desktop-only">
                 <strong class="method-title"><i class="fa-solid fa-desktop"></i> Method 3: Screen Share</strong>
                 <p class="method-desc">Play Spotify/YouTube in another tab. Share that tab to visualize it.</p>
@@ -78,10 +80,13 @@
         </div>
     </div>
     
+    <!-- Rendering Canvas -->
     <canvas id="visualizer"></canvas>
 
+    <!-- Main Logic Script -->
     <script src="js/app.js"></script>
 
+    <!-- Footer -->
     <div id="footer">
         Made with <i class="fa-solid fa-heart"></i> by <a href="https://steamcommunity.com/id/LasBoi/" target="_blank">LasBoi</a>
     </div>
