@@ -373,18 +373,20 @@ startBtn.addEventListener('click', async () => {
 // ==========================================
 // 5. MAIN ANIMATION DRAW LOOP
 // ==========================================
-// This loop runs infinitely from the moment the page loads, 
-// acting as a dynamic background during the menu screen.
 function draw() {
     animationId = requestAnimationFrame(draw);
     time += 0.015; 
     
     let bassPunch = 0;
+    let bufferLength = 0;
+    let dataArray = null;
 
-    // Only extract audio data if the analyser is active and connected
+    // IMPORTANT BUGFIX: We only extract audio data if the analyser is active and receiving input.
+    // If we are idle in the main menu, the analyser is null, so the code safely skips this
+    // and just renders the beautiful silent background animations.
     if (analyser) {
-        const bufferLength = analyser.frequencyBinCount;
-        const dataArray = new Uint8Array(bufferLength);
+        bufferLength = analyser.frequencyBinCount;
+        dataArray = new Uint8Array(bufferLength);
         analyser.getByteFrequencyData(dataArray);
 
         let bassSum = 0;
@@ -392,7 +394,7 @@ function draw() {
         bassPunch = Math.pow((bassSum / 5) / 255, 3);
     }
 
-    // Advance the continuous rotation (speeds up slightly with heavy bass)
+    // Rotates the 3D projection matrix. Spins faster when the bass hits!
     figureRotation += 0.002 + (bassPunch * 0.015);
 
     // Shape Morphing Timeline Logic
@@ -422,18 +424,19 @@ function draw() {
     const fromShape = shapes[fromIndex];
     const toShape = shapes[toIndex];
 
-    // Background trail effect
+    // Background trail effect (Creates a slight motion blur on the lines)
     ctx.fillStyle = 'rgba(5, 5, 12, 0.4)';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.globalCompositeOperation = 'lighter';
 
-    // Draw interactive starfield
+    // Draw interactive starfield (Accelerates with bass)
     ctx.fillStyle = `rgba(200, 220, 255, 0.8)`;
     ctx.beginPath();
     stars.forEach(star => {
         let speed = 2 + (bassPunch * 60);
         star.z -= speed;
         
+        // Reset stars that have flown past the camera
         if (star.z <= 0) {
             star.z = 6000;
             star.x = (Math.random() - 0.5) * 6000;
@@ -451,39 +454,45 @@ function draw() {
 
     let rotX = figureRotation * 0.15;
     let rotY = figureRotation * 0.25;
+    
+    // Smoothly shift colors over time, jumping forward on shape transitions
     let hue = (time * 15 + (currentCycle * 60)) % 360;
     
     ctx.strokeStyle = `hsla(${hue}, 90%, 65%, ${0.5 + bassPunch * 0.5})`;
     ctx.lineWidth = 1.5;
     ctx.beginPath();
 
-    // Render the interpolated 3D shape
+    // Cache the half-buffer size to prevent recalculating it 2000 times a frame
+    let halfBuffer = bufferLength > 0 ? Math.floor(bufferLength / 2) : 0;
+
     for (let i = 0; i < TOTAL_POINTS; i++) {
+        // Linearly interpolate between the old shape and the new shape
         let targetX = fromShape[i].x + (toShape[i].x - fromShape[i].x) * morphWeight;
         let targetY = fromShape[i].y + (toShape[i].y - fromShape[i].y) * morphWeight;
         let targetZ = fromShape[i].z + (toShape[i].z - fromShape[i].z) * morphWeight;
 
-        // Apply audio scale expansion
         let pointAudio = 0;
-        if (analyser) {
-            let freqIndex = i % Math.floor(analyser.frequencyBinCount / 2);
-            let dataArray = new Uint8Array(analyser.frequencyBinCount);
-            analyser.getByteFrequencyData(dataArray);
+        
+        // Match specific 3D vertices to specific audio frequencies from the dataArray
+        if (analyser && dataArray && halfBuffer > 0) {
+            let freqIndex = i % halfBuffer;
             pointAudio = dataArray[freqIndex] / 255;
         }
 
+        // Expand the radius of the shape dynamically based on the audio frequency
         let dynamicRadius = BASE_RADIUS + (pointAudio * 80) + (Math.sin(i + time * 10) * 15 * bassPunch);
         
         let x = targetX * dynamicRadius;
         let y = targetY * dynamicRadius;
         let z = targetZ * dynamicRadius;
 
-        // Apply 3D rotation matrix
+        // Apply 3D Rotation Matrix
         let rotX_y = y * Math.cos(rotX) - z * Math.sin(rotX);
         let rotX_z = y * Math.sin(rotX) + z * Math.cos(rotX);
         let finalX = x * Math.cos(rotY) + rotX_z * Math.sin(rotY);
         let finalZ = -x * Math.sin(rotY) + rotX_z * Math.cos(rotY);
 
+        // Project down to the 2D HTML Canvas
         let proj = project(finalX, rotX_y, finalZ);
         
         if (proj) {
@@ -493,7 +502,7 @@ function draw() {
                 ctx.lineTo(proj.x, proj.y);
             }
             
-            // Highlight highly reactive vertices
+            // Draw bright glowing dots on vertices reacting to heavy frequencies
             if (pointAudio > 0.7) {
                 ctx.fillStyle = `hsla(${hue}, 100%, 85%, 0.9)`;
                 ctx.fillRect(proj.x - 1, proj.y - 1, 2, 2);
@@ -501,8 +510,10 @@ function draw() {
         }
     }
     ctx.stroke();
+    
+    // Reset blend mode for the next frame
     ctx.globalCompositeOperation = 'source-over';
 }
 
-// Start the background idle animation immediately
+// Start the continuous background animation loop immediately on page load!
 draw();
