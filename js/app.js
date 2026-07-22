@@ -381,9 +381,8 @@ function draw() {
     let bufferLength = 0;
     let dataArray = null;
 
-    // IMPORTANT BUGFIX: We only extract audio data if the analyser is active and receiving input.
-    // If we are idle in the main menu, the analyser is null, so the code safely skips this
-    // and just renders the beautiful silent background animations.
+    // CRITICAL BUGFIX: Safely check if analyser exists before pulling audio data!
+    // This allows the animation to run idle in the background before the user hits play.
     if (analyser) {
         bufferLength = analyser.frequencyBinCount;
         dataArray = new Uint8Array(bufferLength);
@@ -474,7 +473,8 @@ function draw() {
         let pointAudio = 0;
         
         // Match specific 3D vertices to specific audio frequencies from the dataArray
-        if (analyser && dataArray && halfBuffer > 0) {
+        // CRITICAL BUGFIX: Only read audio data if it exists!
+        if (dataArray && halfBuffer > 0) {
             let freqIndex = i % halfBuffer;
             pointAudio = dataArray[freqIndex] / 255;
         }
