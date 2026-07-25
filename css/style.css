@@ -1,17 +1,10 @@
-/* ==========================================
-   1. BASE RESETS & ANIMATED BACKGROUND
-   ========================================== */
+/* Base Resets & Flexbox Centering */
 body, html {
     margin: 0;
     padding: 0;
     width: 100%;
     height: 100%;
-    
-    /* Premium Animated Gradient Background for Menu */
-    background: linear-gradient(-45deg, #0f0c29, #302b63, #24243e, #050505);
-    background-size: 400% 400%;
-    animation: gradientBG 15s ease infinite;
-    
+    background-color: #050505;
     overflow: auto; 
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     display: flex;             
@@ -19,34 +12,20 @@ body, html {
     align-items: center;       
 }
 
-/* Switches to pitch black when the visualizer is playing */
-body.visualizer-active {
-    background: #050505 !important;
-    animation: none !important;
-}
-
-/* Smoothly transitions the gradient positions */
-@keyframes gradientBG {
-    0% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
-}
-
-/* ==========================================
-   2. TOP NAVIGATION (BACK BUTTON & VOLUME)
-   ========================================== */
+/* Base style for Top Navigation Elements (Back Button & Volume) */
 .top-nav-btn {
     position: fixed;
     top: 20px;
     z-index: 200;
-    background: rgba(15, 15, 20, 0.65);
+    background: rgba(15, 15, 20, 0.85);
     border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 8px;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
     transition: all 0.2s ease;
-    backdrop-filter: blur(10px); /* Frost glass effect */
+    backdrop-filter: blur(8px); /* Modern blur effect */
 }
 
+/* Back Button Specific Styling */
 .back-btn {
     left: 20px;
     color: #fff;
@@ -66,6 +45,7 @@ body.visualizer-active {
     transform: scale(1.05);
 }
 
+/* Volume Control Specific Styling */
 .volume-container {
     right: 20px;
     padding: 10px 15px;
@@ -100,7 +80,7 @@ body.visualizer-active {
     width: 100%;
     height: 6px;
     cursor: pointer;
-    background: rgba(255, 255, 255, 0.2);
+    background: #333;
     border-radius: 3px;
 }
 
@@ -109,15 +89,13 @@ body.visualizer-active {
     height: 16px;
     width: 16px;
     border-radius: 50%;
-    background: #00e5ff;
+    background: #ff007f;
     cursor: pointer;
     margin-top: -5px;
-    box-shadow: 0 0 10px #00e5ff;
+    box-shadow: 0 0 10px #ff007f;
 }
 
-/* ==========================================
-   3. MAIN UI CONTAINER & MENU
-   ========================================== */
+/* Main UI Container */
 #container {
     position: relative; 
     z-index: 10; 
@@ -129,25 +107,10 @@ body.visualizer-active {
     margin-bottom: 50px;
 }
 
-/* Optional soft glow behind the entire menu */
-#container::before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 120%;
-    height: 120%;
-    background: radial-gradient(circle, rgba(102,192,244,0.1) 0%, rgba(0,0,0,0) 70%);
-    z-index: -1;
-    pointer-events: none;
-}
-
 h1 {
-    text-shadow: 0 0 15px rgba(0,0,0,0.8);
+    text-shadow: 0 0 10px rgba(0,0,0,0.8);
     margin-bottom: 5px;
     font-size: 2.2rem;
-    letter-spacing: 1px;
 }
 
 .subtitle {
@@ -157,15 +120,15 @@ h1 {
     font-size: 0.95rem;
 }
 
-/* Glassmorphism Menu Box */
+/* Menu Box with Frost Glass Effect */
 .instructions {
-    background: rgba(15, 15, 20, 0.65);
+    background: rgba(15, 15, 20, 0.70);
     border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7);
     border-radius: 12px;
     padding: 20px;
     text-align: left;
-    backdrop-filter: blur(15px); /* Strong blur for a modern look */
+    backdrop-filter: blur(12px); /* Ensures text is readable over the moving canvas */
 }
 
 /* Individual Method Cards */
@@ -175,12 +138,6 @@ h1 {
     padding: 15px;
     margin-bottom: 15px;
     border: 1px solid rgba(255, 255, 255, 0.05);
-    transition: transform 0.2s ease;
-}
-
-.method-card:hover {
-    transform: translateY(-2px);
-    border-color: rgba(255, 255, 255, 0.15);
 }
 
 .method-card:last-child {
@@ -193,6 +150,7 @@ h1 {
     margin-bottom: 5px;
 }
 
+/* Theme colors for different methods */
 .method-card:nth-child(2) .method-title { color: #f0c040; } 
 .method-card:nth-child(3) .method-title { color: #66c0f4; } 
 .method-card:nth-child(4) .method-title { color: #ff007f; } 
@@ -206,7 +164,7 @@ h1 {
 .dropdown-select {
     width: 100%;
     padding: 10px;
-    background-color: rgba(0, 0, 0, 0.6);
+    background-color: #0f0f14;
     color: #ffffff;
     border: 1px solid #f0c040;
     border-radius: 6px;
@@ -214,20 +172,13 @@ h1 {
     cursor: pointer;
     margin-bottom: 10px;
     outline: none;
-    transition: all 0.2s ease;
 }
 
-.dropdown-select:focus {
-    box-shadow: 0 0 8px rgba(240, 192, 64, 0.5);
-}
-
-/* ==========================================
-   4. BUTTONS & INTERACTIVE ELEMENTS
-   ========================================== */
 .btn-wrapper {
     text-align: center;
 }
 
+/* Interactive Action Buttons */
 .action-btn {
     display: inline-block;
     padding: 10px 25px;
@@ -252,10 +203,10 @@ h1 {
     transform: none;
 }
 
-.radio-btn { background-color: #f0c040; box-shadow: 0 0 12px rgba(240, 192, 64, 0.6); color: #000; }
-.file-btn { background-color: #66c0f4; box-shadow: 0 0 12px rgba(102, 192, 244, 0.6); color: #000; }
-.play-file-btn { background-color: #00e5ff; box-shadow: 0 0 12px rgba(0, 229, 255, 0.6); color: #000; }
-.desktop-btn { background-color: #ff007f; box-shadow: 0 0 12px rgba(255, 0, 127, 0.6); }
+.radio-btn { background-color: #f0c040; box-shadow: 0 0 12px #f0c040; color: #000; }
+.file-btn { background-color: #66c0f4; box-shadow: 0 0 12px #66c0f4; color: #000; }
+.play-file-btn { background-color: #00e5ff; box-shadow: 0 0 12px #00e5ff; color: #000; }
+.desktop-btn { background-color: #ff007f; box-shadow: 0 0 12px #ff007f; }
 
 .hidden-section {
     display: none;
@@ -272,9 +223,7 @@ h1 {
     word-break: break-all;
 }
 
-/* ==========================================
-   5. VISUALIZER CANVAS
-   ========================================== */
+/* 3D Canvas Background */
 canvas {
     position: fixed;
     top: 0;
@@ -282,12 +231,9 @@ canvas {
     width: 100vw;
     height: 100vh;
     z-index: 1; 
-    display: none; /* Hidden until music actually plays */
 }
 
-/* ==========================================
-   6. FOOTER
-   ========================================== */
+/* Footer Section */
 #footer { 
     position: fixed; 
     bottom: 15px; 
@@ -295,12 +241,11 @@ canvas {
     text-align: center; 
     z-index: 100; 
     font-size: 14px; 
-    color: rgba(255, 255, 255, 0.5); 
+    color: #8f98a0; 
 }
 
 #footer i { color: #ff3366; margin: 0 4px; animation: heartbeat 1.5s infinite; }
-#footer a { color: #66c0f4; text-decoration: none; font-weight: 800; transition: color 0.2s; }
-#footer a:hover { color: #fff; }
+#footer a { color: #66c0f4; text-decoration: none; font-weight: 800; }
 
 @keyframes heartbeat { 
     0%, 100% { transform: scale(1); } 
@@ -308,7 +253,7 @@ canvas {
     28%, 70% { transform: scale(1); } 
 }
 
-/* Mobile Responsive Overrides */
+/* Responsive adjustments for mobile devices */
 @media (max-width: 768px) {
     .desktop-only { display: none !important; }
     h1 { font-size: 1.8rem; }
