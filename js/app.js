@@ -30,9 +30,13 @@ let isMuted = false;
 let previousVolume = 1; 
 let isVisualizerActive = false; 
 
+// Timing and Rotation
 let time = 0;             
 let figureRotation = 0;   
 let animationId; 
+
+// Performance Optimization: Global Data Array prevents memory leaks
+let dataArray = new Uint8Array(256); 
 
 // ==========================================
 // 2. CANVAS & 3D PROJECTION SETUP
@@ -110,7 +114,7 @@ let cyberTornado = []; for (let i = 0; i < TOTAL_POINTS; i++) { let t = i / (TOT
 
 // --- STARFIELD BACKGROUND ---
 const stars = [];
-const NUM_STARS = 1500;
+const NUM_STARS = 600; // Optimized: Reduced star count for massive performance boost
 for (let i = 0; i < NUM_STARS; i++) {
     stars.push({ x: (Math.random() - 0.5) * 6000, y: (Math.random() - 0.5) * 6000, z: Math.random() * 6000 });
 }
@@ -157,10 +161,6 @@ function cleanupAudio() {
         try { sourceNode.stop(); } catch(e) {}
         try { sourceNode.disconnect(); } catch(e) {}
         sourceNode = null;
-    }
-    
-    if (analyser) {
-        try { analyser.disconnect(); } catch(e) {}
     }
 }
 
@@ -219,7 +219,11 @@ muteIcon.addEventListener('click', () => {
 
 function startVisuals() {
     isVisualizerActive = true;
+    
+    // Switch CSS background to pitch black and force canvas background to pitch black 
+    // This perfectly prevents the alpha buildup bug!
     document.body.classList.add('visualizer-active'); 
+    canvas.style.backgroundColor = '#000000';
     
     container.style.display = 'none';
     backBtn.style.display = 'flex';
@@ -356,16 +360,14 @@ function draw() {
     if (!isVisualizerActive) return;
     
     animationId = requestAnimationFrame(draw);
-    time += 0.015; 
+    time += 0.008; // Slower, smoother overall animation speed
     
     let bassPunch = 0;
-    let bufferLength = 0;
-    let dataArray = null;
+    let halfBuffer = 0;
 
     if (analyser) {
-        bufferLength = analyser.frequencyBinCount;
-        dataArray = new Uint8Array(bufferLength);
         analyser.getByteFrequencyData(dataArray);
+        halfBuffer = Math.floor(analyser.frequencyBinCount / 2);
 
         let bassSum = 0;
         for (let i = 1; i <= 5; i++) bassSum += dataArray[i];
@@ -374,8 +376,9 @@ function draw() {
 
     figureRotation += 0.002 + (bassPunch * 0.015);
 
-    const CYCLE_LENGTH = 10;
-    const HOLD_LENGTH = 6;
+    // Optimized Timing for longer shape holds and slower morphs
+    const CYCLE_LENGTH = 15;
+    const HOLD_LENGTH = 10;
     let currentCycle = Math.floor(time / CYCLE_LENGTH);
     let cycleTime = time % CYCLE_LENGTH;
     
@@ -400,18 +403,15 @@ function draw() {
     const fromShape = shapes[fromIndex];
     const toShape = shapes[toIndex];
 
-    // CRITICAL FIX: The motion trail is back!
-    // Using rgba(5, 5, 5, 0.3) matches the exact #050505 CSS background.
-    // This perfectly prevents the alpha rounding bug (no gray box) while keeping the neon glow!
+    // Perfect Black Fade! Eliminates the gray box entirely.
     ctx.globalCompositeOperation = 'source-over';
-    ctx.fillStyle = 'rgba(5, 5, 5, 0.3)';
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    ctx.globalCompositeOperation = 'lighter'; // Additive blending for neon effects
+    ctx.globalCompositeOperation = 'lighter'; 
 
-    // Render Starfield Background
+    // Render Starfield Background (Optimized using fillRect)
     ctx.fillStyle = `rgba(200, 220, 255, 0.8)`;
-    ctx.beginPath();
     stars.forEach(star => {
         let speed = 2 + (bassPunch * 60);
         star.z -= speed;
@@ -425,11 +425,10 @@ function draw() {
         let proj = project(star.x, star.y, star.z);
         if (proj) {
             let radius = Math.max(0.1, (0.5 + bassPunch * 2) * proj.scale);
-            ctx.moveTo(proj.x, proj.y);
-            ctx.arc(proj.x, proj.y, radius, 0, Math.PI * 2);
+            // Optimization: fillRect is 10x faster than drawing circles (arc)
+            ctx.fillRect(proj.x, proj.y, radius * 1.5, radius * 1.5); 
         }
     });
-    ctx.fill();
 
     let rotX = figureRotation * 0.15;
     let rotY = figureRotation * 0.25;
@@ -439,8 +438,6 @@ function draw() {
     ctx.lineWidth = 1.5;
     ctx.beginPath();
 
-    let halfBuffer = bufferLength > 0 ? Math.floor(bufferLength / 2) : 0;
-
     // Render 3D Shape
     for (let i = 0; i < TOTAL_POINTS; i++) {
         let targetX = fromShape[i].x + (toShape[i].x - fromShape[i].x) * morphWeight;
@@ -448,8 +445,7 @@ function draw() {
         let targetZ = fromShape[i].z + (toShape[i].z - fromShape[i].z) * morphWeight;
 
         let pointAudio = 0;
-        
-        if (dataArray && halfBuffer > 0) {
+        if (halfBuffer > 0) {
             let freqIndex = i % halfBuffer;
             pointAudio = dataArray[freqIndex] / 255;
         }
@@ -473,13 +469,10 @@ function draw() {
             } else {
                 ctx.lineTo(proj.x, proj.y);
             }
-            
-            if (pointAudio > 0.7) {
-                ctx.fillStyle = `hsla(${hue}, 100%, 85%, 0.9)`;
-                ctx.fillRect(proj.x - 1, proj.y - 1, 2, 2);
-            }
         }
     }
+    
+    // Optimization: Draw the entire path once at the end
     ctx.stroke();
     ctx.globalCompositeOperation = 'source-over';
 }
