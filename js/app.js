@@ -21,22 +21,18 @@ const playSelectedBtn = document.getElementById('playSelectedBtn');
 const startBtn = document.getElementById('startBtn');
 
 // The Parallel Audio Engine Setup (Guarantees mobile playback)
-const speakerAudio = new Audio(); 
+const speakerAudio = new Audio(); // Plays sound safely to OS speakers
 let audioContext, analyser, globalGainNode, sourceNode, visualAudioElement;
 
 // State Variables
 let selectedFile = null;
 let isMuted = false;
 let previousVolume = 1; 
-let isVisualizerActive = false; 
+let isVisualizerActive = false; // Controls the render loop and background toggle
 
-// Timing and Rotation
 let time = 0;             
 let figureRotation = 0;   
 let animationId; 
-
-// Performance Optimization: Global Data Array prevents memory leaks
-let dataArray = new Uint8Array(256); 
 
 // ==========================================
 // 2. CANVAS & 3D PROJECTION SETUP
@@ -51,6 +47,7 @@ resizeCanvas();
 const focalLength = 900;
 const camZ = -1400; 
 
+// Converts 3D coordinates (x,y,z) into 2D canvas coordinates
 function project(x, y, z) {
     const rz = z - camZ;
     if (rz <= 0) return null; 
@@ -65,9 +62,10 @@ const TOTAL_POINTS = 2000;
 const BASE_RADIUS = 350;
 const shapes = [];
 
+// Cubic easing function for seamless shape transitions
 const easeInOutCubic = t => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 
-// Shape Array Population
+// Shape Array Population (43 Unique Mathematical Structures)
 let sphere = []; for (let i = 0; i < TOTAL_POINTS; i++) { let t = i / (TOTAL_POINTS - 1); let phi = Math.acos(1 - 2 * t); let theta = Math.PI * (1 + Math.sqrt(5)) * i; sphere.push({ x: Math.sin(phi) * Math.cos(theta), y: Math.sin(phi) * Math.sin(theta), z: Math.cos(phi) }); } shapes.push(sphere);
 let torus = []; for (let i = 0; i < TOTAL_POINTS; i++) { let t = i / (TOTAL_POINTS - 1); let theta = t * Math.PI * 2 * 40; let phi = t * Math.PI * 2; let R = 0.7, r = 0.3; torus.push({ x: (R + r * Math.cos(theta)) * Math.cos(phi), y: (R + r * Math.cos(theta)) * Math.sin(phi), z: r * Math.sin(theta) }); } shapes.push(torus);
 let hourglass = []; for (let i = 0; i < TOTAL_POINTS; i++) { let t = i / (TOTAL_POINTS - 1); let theta = t * Math.PI * 2 * 50; let y = (t - 0.5) * 2; let r = 0.2 + (y * y); hourglass.push({ x: r * Math.cos(theta), y: y, z: r * Math.sin(theta) }); } shapes.push(hourglass);
@@ -114,11 +112,12 @@ let cyberTornado = []; for (let i = 0; i < TOTAL_POINTS; i++) { let t = i / (TOT
 
 // --- STARFIELD BACKGROUND ---
 const stars = [];
-const NUM_STARS = 600; // Optimized: Reduced star count for massive performance boost
+const NUM_STARS = 1500;
 for (let i = 0; i < NUM_STARS; i++) {
     stars.push({ x: (Math.random() - 0.5) * 6000, y: (Math.random() - 0.5) * 6000, z: Math.random() * 6000 });
 }
 
+// Random State Machine Initialization
 let lastCycle = -1;
 let fromIndex = Math.floor(Math.random() * shapes.length);
 let toIndex = Math.floor(Math.random() * shapes.length);
@@ -128,11 +127,15 @@ if (fromIndex === toIndex) toIndex = (toIndex + 1) % shapes.length;
 // ==========================================
 // 4. THE PARALLEL AUDIO ENGINE
 // ==========================================
+// This architecture ensures mobile compatibility by completely separating 
+// the Audio output (Track 1) from the Visual calculations (Track 2).
+
 async function initAudioContext() {
     if (!audioContext) {
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         audioContext = new AudioContext();
         
+        // Master GainNode is used for Desktop Screen Share ONLY.
         globalGainNode = audioContext.createGain();
         globalGainNode.connect(audioContext.destination);
         
@@ -145,11 +148,14 @@ async function initAudioContext() {
     }
 }
 
+// Complete teardown of all audio layers
 function cleanupAudio() {
+    // Stop OS Speaker Output
     speakerAudio.pause();
     speakerAudio.removeAttribute('src'); 
     speakerAudio.load();
     
+    // Stop Visual Audio fetchers
     if (visualAudioElement) {
         visualAudioElement.pause();
         visualAudioElement.removeAttribute('src');
@@ -162,11 +168,16 @@ function cleanupAudio() {
         try { sourceNode.disconnect(); } catch(e) {}
         sourceNode = null;
     }
+    
+    if (analyser) {
+        try { analyser.disconnect(); } catch(e) {}
+    }
 }
 
+// Reverts application state to the main menu without stopping the background animation
 function returnToMenu() {
     isVisualizerActive = false;
-    document.body.classList.remove('visualizer-active'); 
+    document.body.classList.remove('visualizer-active'); // Restores the colorful background
     
     cleanupAudio();
     
@@ -188,9 +199,13 @@ backBtn.addEventListener('click', returnToMenu);
 volumeSlider.addEventListener('input', (e) => {
     const vol = parseFloat(e.target.value);
     
+    // Applies volume to Radio & Local Files
     speakerAudio.volume = vol; 
+    
+    // Applies volume to Desktop Screen Share
     if (globalGainNode) globalGainNode.gain.value = vol; 
     
+    // UI Update
     muteIcon.className = vol === 0 ? 'fa-solid fa-volume-xmark' : 
                          vol < 0.5 ? 'fa-solid fa-volume-low' : 
                          'fa-solid fa-volume-high';
@@ -217,24 +232,23 @@ muteIcon.addEventListener('click', () => {
     }
 });
 
+// Triggers the transition from Menu to Visualizer
 function startVisuals() {
     isVisualizerActive = true;
+    document.body.classList.add('visualizer-active'); // Switches to pitch black CSS background
     
-    // Switch CSS background to pitch black and force canvas background to pitch black 
-    // This perfectly prevents the alpha buildup bug!
-    document.body.classList.add('visualizer-active'); 
-    canvas.style.backgroundColor = '#000000';
-    
+    // Hide UI, Show Canvas
     container.style.display = 'none';
     backBtn.style.display = 'flex';
     volumeControl.style.display = 'flex';
     canvas.style.display = 'block';
     
-    draw(); 
+    draw(); // Start rendering loop
 }
 
+
 // ==========================================
-// METHOD 1: LIVE RADIO 
+// METHOD 1: LIVE RADIO (Parallel Tracks)
 // ==========================================
 playRadioBtn.addEventListener('click', async () => {
     try {
@@ -245,17 +259,21 @@ playRadioBtn.addEventListener('click', async () => {
         await initAudioContext();
         cleanupAudio();
 
+        // TRACK 1: The Sound Maker (Guaranteed to play on Mobile OS)
         speakerAudio.src = radioSelect.value;
         speakerAudio.volume = parseFloat(volumeSlider.value);
         
+        // TRACK 2: The Visual Maker (Muted, reads mathematical data only)
         visualAudioElement = new Audio();
         visualAudioElement.crossOrigin = "anonymous"; 
         visualAudioElement.src = radioSelect.value;
-        visualAudioElement.muted = true; 
+        visualAudioElement.muted = true; // Crucial: Prevents double audio echo
         
+        // Connect Visual Maker to Analyser (Notice it NEVER connects to audioContext.destination)
         sourceNode = audioContext.createMediaElementSource(visualAudioElement);
         sourceNode.connect(analyser);
 
+        // Start both simultaneously
         Promise.all([
             speakerAudio.play(),
             visualAudioElement.play()
@@ -278,7 +296,7 @@ playRadioBtn.addEventListener('click', async () => {
 
 
 // ==========================================
-// METHOD 2: LOCAL AUDIO FILE 
+// METHOD 2: LOCAL AUDIO FILE (Parallel Tracks)
 // ==========================================
 audioUpload.addEventListener('change', function() {
     selectedFile = this.files[0];
@@ -299,17 +317,20 @@ playSelectedBtn.addEventListener('click', async () => {
         await initAudioContext();
         cleanupAudio();
 
+        // TRACK 1: The Sound Maker
         const objectURL = URL.createObjectURL(selectedFile);
         speakerAudio.src = objectURL;
         speakerAudio.volume = parseFloat(volumeSlider.value);
 
+        // TRACK 2: The Visual Maker (Decodes data directly into buffer)
         const arrayBuffer = await selectedFile.arrayBuffer();
         const decodedBuffer = await audioContext.decodeAudioData(arrayBuffer);
         
         sourceNode = audioContext.createBufferSource();
         sourceNode.buffer = decodedBuffer;
-        sourceNode.connect(analyser); 
+        sourceNode.connect(analyser); // Analyser is NOT connected to destination
 
+        // Start both simultaneously
         speakerAudio.play().then(() => {
             sourceNode.start(0);
             startVisuals();
@@ -342,6 +363,8 @@ startBtn.addEventListener('click', async () => {
             returnToMenu();
         };
 
+        // For Screen Share, we DO connect the analyser to the Global Gain Node
+        // Because Web Audio API is fully supported on Desktop OS without muting it.
         sourceNode = audioContext.createMediaStreamSource(stream);
         sourceNode.connect(analyser);
         analyser.connect(globalGainNode);
@@ -357,17 +380,21 @@ startBtn.addEventListener('click', async () => {
 // 5. MAIN ANIMATION & RENDERING LOOP
 // ==========================================
 function draw() {
+    // If we returned to the menu, stop drawing to save CPU/GPU!
     if (!isVisualizerActive) return;
     
     animationId = requestAnimationFrame(draw);
-    time += 0.008; // Slower, smoother overall animation speed
+    time += 0.015; 
     
     let bassPunch = 0;
-    let halfBuffer = 0;
+    let bufferLength = 0;
+    let dataArray = null;
 
+    // Safely extract audio data while playing
     if (analyser) {
+        bufferLength = analyser.frequencyBinCount;
+        dataArray = new Uint8Array(bufferLength);
         analyser.getByteFrequencyData(dataArray);
-        halfBuffer = Math.floor(analyser.frequencyBinCount / 2);
 
         let bassSum = 0;
         for (let i = 1; i <= 5; i++) bassSum += dataArray[i];
@@ -376,9 +403,9 @@ function draw() {
 
     figureRotation += 0.002 + (bassPunch * 0.015);
 
-    // Optimized Timing for longer shape holds and slower morphs
-    const CYCLE_LENGTH = 15;
-    const HOLD_LENGTH = 10;
+    // Shape Morphing Timeline Logic
+    const CYCLE_LENGTH = 10;
+    const HOLD_LENGTH = 6;
     let currentCycle = Math.floor(time / CYCLE_LENGTH);
     let cycleTime = time % CYCLE_LENGTH;
     
@@ -403,15 +430,15 @@ function draw() {
     const fromShape = shapes[fromIndex];
     const toShape = shapes[toIndex];
 
-    // Perfect Black Fade! Eliminates the gray box entirely.
-    ctx.globalCompositeOperation = 'source-over';
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
+    // Create a smooth trailing effect by clearing the canvas with a transparent fill
+    // Uses the pitch black color requested for perfect 3D contrast
+    ctx.fillStyle = 'rgba(5, 5, 12, 0.4)';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.globalCompositeOperation = 'lighter';
 
-    ctx.globalCompositeOperation = 'lighter'; 
-
-    // Render Starfield Background (Optimized using fillRect)
+    // Render Starfield Background
     ctx.fillStyle = `rgba(200, 220, 255, 0.8)`;
+    ctx.beginPath();
     stars.forEach(star => {
         let speed = 2 + (bassPunch * 60);
         star.z -= speed;
@@ -425,10 +452,11 @@ function draw() {
         let proj = project(star.x, star.y, star.z);
         if (proj) {
             let radius = Math.max(0.1, (0.5 + bassPunch * 2) * proj.scale);
-            // Optimization: fillRect is 10x faster than drawing circles (arc)
-            ctx.fillRect(proj.x, proj.y, radius * 1.5, radius * 1.5); 
+            ctx.moveTo(proj.x, proj.y);
+            ctx.arc(proj.x, proj.y, radius, 0, Math.PI * 2);
         }
     });
+    ctx.fill();
 
     let rotX = figureRotation * 0.15;
     let rotY = figureRotation * 0.25;
@@ -438,6 +466,8 @@ function draw() {
     ctx.lineWidth = 1.5;
     ctx.beginPath();
 
+    let halfBuffer = bufferLength > 0 ? Math.floor(bufferLength / 2) : 0;
+
     // Render 3D Shape
     for (let i = 0; i < TOTAL_POINTS; i++) {
         let targetX = fromShape[i].x + (toShape[i].x - fromShape[i].x) * morphWeight;
@@ -445,7 +475,8 @@ function draw() {
         let targetZ = fromShape[i].z + (toShape[i].z - fromShape[i].z) * morphWeight;
 
         let pointAudio = 0;
-        if (halfBuffer > 0) {
+        
+        if (dataArray && halfBuffer > 0) {
             let freqIndex = i % halfBuffer;
             pointAudio = dataArray[freqIndex] / 255;
         }
@@ -469,10 +500,13 @@ function draw() {
             } else {
                 ctx.lineTo(proj.x, proj.y);
             }
+            
+            if (pointAudio > 0.7) {
+                ctx.fillStyle = `hsla(${hue}, 100%, 85%, 0.9)`;
+                ctx.fillRect(proj.x - 1, proj.y - 1, 2, 2);
+            }
         }
     }
-    
-    // Optimization: Draw the entire path once at the end
     ctx.stroke();
     ctx.globalCompositeOperation = 'source-over';
 }
