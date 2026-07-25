@@ -28,7 +28,7 @@ let audioContext, analyser, globalGainNode, sourceNode, visualAudioElement;
 let selectedFile = null;
 let isMuted = false;
 let previousVolume = 1; 
-let isVisualizerActive = false; // Controls the render loop
+let isVisualizerActive = false; // Controls the render loop and background toggle
 
 let time = 0;             
 let figureRotation = 0;   
@@ -125,13 +125,17 @@ if (fromIndex === toIndex) toIndex = (toIndex + 1) % shapes.length;
 
 
 // ==========================================
-// 4. AUDIO ENGINE & CONTROL LOGIC
+// 4. THE PARALLEL AUDIO ENGINE
 // ==========================================
+// This architecture ensures mobile compatibility by completely separating 
+// the Audio output (Track 1) from the Visual calculations (Track 2).
+
 async function initAudioContext() {
     if (!audioContext) {
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         audioContext = new AudioContext();
         
+        // Master GainNode is used for Desktop Screen Share ONLY.
         globalGainNode = audioContext.createGain();
         globalGainNode.connect(audioContext.destination);
         
@@ -144,12 +148,14 @@ async function initAudioContext() {
     }
 }
 
-// Complete teardown of all audio streams
+// Complete teardown of all audio layers
 function cleanupAudio() {
+    // Stop OS Speaker Output
     speakerAudio.pause();
     speakerAudio.removeAttribute('src'); 
     speakerAudio.load();
     
+    // Stop Visual Audio fetchers
     if (visualAudioElement) {
         visualAudioElement.pause();
         visualAudioElement.removeAttribute('src');
@@ -168,20 +174,19 @@ function cleanupAudio() {
     }
 }
 
-// Return to the beautifully styled main menu
+// Reverts application state to the main menu without stopping the background animation
 function returnToMenu() {
-    isVisualizerActive = false; // Stops the drawing loop
-    cancelAnimationFrame(animationId);
+    isVisualizerActive = false;
+    document.body.classList.remove('visualizer-active'); // Restores the colorful background
+    
     cleanupAudio();
     
-    // Hide canvas, show UI
     canvas.style.display = 'none';
     container.style.display = 'block';
     backBtn.style.display = 'none';
     volumeControl.style.display = 'none'; 
     filePlaySection.style.display = 'none';
     
-    // Reset buttons
     playRadioBtn.innerText = "Play Radio & Visualize";
     playRadioBtn.disabled = false;
     playSelectedBtn.innerText = "Play File & Visualize";
@@ -190,13 +195,17 @@ function returnToMenu() {
 backBtn.addEventListener('click', returnToMenu);
 
 
-// --- VOLUME SLIDER CONTROLS ---
+// --- VOLUME SLIDER LOGIC ---
 volumeSlider.addEventListener('input', (e) => {
     const vol = parseFloat(e.target.value);
     
+    // Applies volume to Radio & Local Files
     speakerAudio.volume = vol; 
+    
+    // Applies volume to Desktop Screen Share
     if (globalGainNode) globalGainNode.gain.value = vol; 
     
+    // UI Update
     muteIcon.className = vol === 0 ? 'fa-solid fa-volume-xmark' : 
                          vol < 0.5 ? 'fa-solid fa-volume-low' : 
                          'fa-solid fa-volume-high';
@@ -226,6 +235,7 @@ muteIcon.addEventListener('click', () => {
 // Triggers the transition from Menu to Visualizer
 function startVisuals() {
     isVisualizerActive = true;
+    document.body.classList.add('visualizer-active'); // Switches to pitch black CSS background
     
     // Hide UI, Show Canvas
     container.style.display = 'none';
@@ -233,12 +243,12 @@ function startVisuals() {
     volumeControl.style.display = 'flex';
     canvas.style.display = 'block';
     
-    draw(); // Start rendering
+    draw(); // Start rendering loop
 }
 
 
 // ==========================================
-// METHOD 1: LIVE RADIO 
+// METHOD 1: LIVE RADIO (Parallel Tracks)
 // ==========================================
 playRadioBtn.addEventListener('click', async () => {
     try {
@@ -249,19 +259,21 @@ playRadioBtn.addEventListener('click', async () => {
         await initAudioContext();
         cleanupAudio();
 
-        // Standard Audio for speakers
+        // TRACK 1: The Sound Maker (Guaranteed to play on Mobile OS)
         speakerAudio.src = radioSelect.value;
         speakerAudio.volume = parseFloat(volumeSlider.value);
         
-        // Parallel Audio for data extraction
+        // TRACK 2: The Visual Maker (Muted, reads mathematical data only)
         visualAudioElement = new Audio();
         visualAudioElement.crossOrigin = "anonymous"; 
         visualAudioElement.src = radioSelect.value;
-        visualAudioElement.muted = true; 
+        visualAudioElement.muted = true; // Crucial: Prevents double audio echo
         
+        // Connect Visual Maker to Analyser (Notice it NEVER connects to audioContext.destination)
         sourceNode = audioContext.createMediaElementSource(visualAudioElement);
         sourceNode.connect(analyser);
 
+        // Start both simultaneously
         Promise.all([
             speakerAudio.play(),
             visualAudioElement.play()
@@ -284,7 +296,7 @@ playRadioBtn.addEventListener('click', async () => {
 
 
 // ==========================================
-// METHOD 2: LOCAL AUDIO FILE 
+// METHOD 2: LOCAL AUDIO FILE (Parallel Tracks)
 // ==========================================
 audioUpload.addEventListener('change', function() {
     selectedFile = this.files[0];
@@ -305,19 +317,20 @@ playSelectedBtn.addEventListener('click', async () => {
         await initAudioContext();
         cleanupAudio();
 
-        // 1. Play directly via speaker element
+        // TRACK 1: The Sound Maker
         const objectURL = URL.createObjectURL(selectedFile);
         speakerAudio.src = objectURL;
         speakerAudio.volume = parseFloat(volumeSlider.value);
 
-        // 2. Feed visual data via Buffer
+        // TRACK 2: The Visual Maker (Decodes data directly into buffer)
         const arrayBuffer = await selectedFile.arrayBuffer();
         const decodedBuffer = await audioContext.decodeAudioData(arrayBuffer);
         
         sourceNode = audioContext.createBufferSource();
         sourceNode.buffer = decodedBuffer;
-        sourceNode.connect(analyser);
+        sourceNode.connect(analyser); // Analyser is NOT connected to destination
 
+        // Start both simultaneously
         speakerAudio.play().then(() => {
             sourceNode.start(0);
             startVisuals();
@@ -350,6 +363,8 @@ startBtn.addEventListener('click', async () => {
             returnToMenu();
         };
 
+        // For Screen Share, we DO connect the analyser to the Global Gain Node
+        // Because Web Audio API is fully supported on Desktop OS without muting it.
         sourceNode = audioContext.createMediaStreamSource(stream);
         sourceNode.connect(analyser);
         analyser.connect(globalGainNode);
@@ -365,7 +380,7 @@ startBtn.addEventListener('click', async () => {
 // 5. MAIN ANIMATION & RENDERING LOOP
 // ==========================================
 function draw() {
-    // If we returned to the menu, stop drawing to save processing power!
+    // If we returned to the menu, stop drawing to save CPU/GPU!
     if (!isVisualizerActive) return;
     
     animationId = requestAnimationFrame(draw);
@@ -388,7 +403,7 @@ function draw() {
 
     figureRotation += 0.002 + (bassPunch * 0.015);
 
-    // Shape Morphing Logic
+    // Shape Morphing Timeline Logic
     const CYCLE_LENGTH = 10;
     const HOLD_LENGTH = 6;
     let currentCycle = Math.floor(time / CYCLE_LENGTH);
@@ -416,8 +431,8 @@ function draw() {
     const toShape = shapes[toIndex];
 
     // Create a smooth trailing effect by clearing the canvas with a transparent fill
-    // Colored slightly dark blue/purple to match the beautiful CSS background
-    ctx.fillStyle = 'rgba(15, 12, 41, 0.4)';
+    // Uses the pitch black color requested for perfect 3D contrast
+    ctx.fillStyle = 'rgba(5, 5, 12, 0.4)';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.globalCompositeOperation = 'lighter';
 

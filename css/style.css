@@ -7,7 +7,7 @@ body, html {
     width: 100%;
     height: 100%;
     
-    /* Premium Animated Gradient Background */
+    /* Premium Animated Gradient Background for Menu */
     background: linear-gradient(-45deg, #0f0c29, #302b63, #24243e, #050505);
     background-size: 400% 400%;
     animation: gradientBG 15s ease infinite;
@@ -17,6 +17,12 @@ body, html {
     display: flex;             
     justify-content: center;   
     align-items: center;       
+}
+
+/* Switches to pitch black when the visualizer is playing */
+body.visualizer-active {
+    background: #050505 !important;
+    animation: none !important;
 }
 
 /* Smoothly transitions the gradient positions */
@@ -276,7 +282,7 @@ canvas {
     width: 100vw;
     height: 100vh;
     z-index: 1; 
-    display: none; /* CRITICAL FIX: Completely hidden until music actually plays */
+    display: none; /* Hidden until music actually plays */
 }
 
 /* ==========================================
